@@ -1,12 +1,8 @@
-// The qualified nations for the FIFA World Cup 2026, ordered by (approximate)
-// FIFA World Ranking. `rank` drives the pooling for the draw. `code` is an
-// ISO 3166-1 alpha-2 code used to load flags from flagcdn.com (England /
-// Scotland use the special gb-eng / gb-sct codes). `conf` is the confederation.
-//
-// NOTE: the confirmed list is 47 nations; the 48th (the second intercontinental
-// play-off winner) is not yet reflected here and is shown as a clearly-labelled
-// "Play-off Winner (TBC)" placeholder (code 'tbd'). Replace that entry once the
-// final qualifier is known. Everything here is easy to edit.
+// The 48 qualified nations for the FIFA World Cup 2026, ordered by (approximate)
+// FIFA World Ranking. `rank` drives the sweepstake pooling and knockout seeding.
+// `code` is an ISO 3166-1 alpha-2 code used to load flags from flagcdn.com
+// (England / Scotland use the special gb-eng / gb-sct codes). `conf` is the
+// confederation. The official group allocation lives in src/lib/groups.js.
 
 export const TEAMS = [
   { rank: 1, name: 'Argentina', code: 'ar', conf: 'CONMEBOL', points: 1886 },
@@ -31,32 +27,32 @@ export const TEAMS = [
   { rank: 20, name: 'Mexico', code: 'mx', conf: 'CONCACAF', points: 1588, host: true },
   { rank: 21, name: 'Ecuador', code: 'ec', conf: 'CONMEBOL', points: 1581 },
   { rank: 22, name: 'Austria', code: 'at', conf: 'UEFA', points: 1572 },
-  { rank: 23, name: 'Norway', code: 'no', conf: 'UEFA', points: 1555 },
-  { rank: 24, name: 'Türkiye', code: 'tr', conf: 'UEFA', points: 1545 },
-  { rank: 25, name: 'Sweden', code: 'se', conf: 'UEFA', points: 1534 },
-  { rank: 26, name: 'Scotland', code: 'gb-sct', conf: 'UEFA', points: 1525 },
-  { rank: 27, name: 'Canada', code: 'ca', conf: 'CONCACAF', points: 1516, host: true },
-  { rank: 28, name: 'Egypt', code: 'eg', conf: 'CAF', points: 1508 },
-  { rank: 29, name: 'Panama', code: 'pa', conf: 'CONCACAF', points: 1498 },
-  { rank: 30, name: 'Algeria', code: 'dz', conf: 'CAF', points: 1490 },
-  { rank: 31, name: "Côte d'Ivoire", code: 'ci', conf: 'CAF', points: 1482 },
-  { rank: 32, name: 'Paraguay', code: 'py', conf: 'CONMEBOL', points: 1474 },
-  { rank: 33, name: 'Tunisia', code: 'tn', conf: 'CAF', points: 1466 },
-  { rank: 34, name: 'Czechia', code: 'cz', conf: 'UEFA', points: 1458 },
-  { rank: 35, name: 'Qatar', code: 'qa', conf: 'AFC', points: 1450 },
-  { rank: 36, name: 'DR Congo', code: 'cd', conf: 'CAF', points: 1442 },
-  { rank: 37, name: 'Saudi Arabia', code: 'sa', conf: 'AFC', points: 1434 },
-  { rank: 38, name: 'Iraq', code: 'iq', conf: 'AFC', points: 1426 },
-  { rank: 39, name: 'Uzbekistan', code: 'uz', conf: 'AFC', points: 1418 },
-  { rank: 40, name: 'South Africa', code: 'za', conf: 'CAF', points: 1410 },
-  { rank: 41, name: 'Bosnia and Herzegovina', code: 'ba', conf: 'UEFA', points: 1402 },
-  { rank: 42, name: 'Jordan', code: 'jo', conf: 'AFC', points: 1394 },
-  { rank: 43, name: 'Ghana', code: 'gh', conf: 'CAF', points: 1386 },
-  { rank: 44, name: 'Cabo Verde', code: 'cv', conf: 'CAF', points: 1378 },
-  { rank: 45, name: 'Curaçao', code: 'cw', conf: 'CONCACAF', points: 1360 },
-  { rank: 46, name: 'Haiti', code: 'ht', conf: 'CONCACAF', points: 1345 },
-  { rank: 47, name: 'New Zealand', code: 'nz', conf: 'OFC', points: 1320 },
-  { rank: 48, name: 'Play-off Winner (TBC)', code: 'tbd', conf: 'TBC', points: 1300, tbc: true },
+  { rank: 23, name: 'Australia', code: 'au', conf: 'AFC', points: 1564 },
+  { rank: 24, name: 'Norway', code: 'no', conf: 'UEFA', points: 1555 },
+  { rank: 25, name: 'Türkiye', code: 'tr', conf: 'UEFA', points: 1545 },
+  { rank: 26, name: 'Sweden', code: 'se', conf: 'UEFA', points: 1534 },
+  { rank: 27, name: 'Scotland', code: 'gb-sct', conf: 'UEFA', points: 1525 },
+  { rank: 28, name: 'Canada', code: 'ca', conf: 'CONCACAF', points: 1516, host: true },
+  { rank: 29, name: 'Egypt', code: 'eg', conf: 'CAF', points: 1508 },
+  { rank: 30, name: 'Panama', code: 'pa', conf: 'CONCACAF', points: 1498 },
+  { rank: 31, name: 'Algeria', code: 'dz', conf: 'CAF', points: 1490 },
+  { rank: 32, name: "Côte d'Ivoire", code: 'ci', conf: 'CAF', points: 1482 },
+  { rank: 33, name: 'Paraguay', code: 'py', conf: 'CONMEBOL', points: 1474 },
+  { rank: 34, name: 'Tunisia', code: 'tn', conf: 'CAF', points: 1466 },
+  { rank: 35, name: 'Czechia', code: 'cz', conf: 'UEFA', points: 1458 },
+  { rank: 36, name: 'Qatar', code: 'qa', conf: 'AFC', points: 1450 },
+  { rank: 37, name: 'DR Congo', code: 'cd', conf: 'CAF', points: 1442 },
+  { rank: 38, name: 'Saudi Arabia', code: 'sa', conf: 'AFC', points: 1434 },
+  { rank: 39, name: 'Iraq', code: 'iq', conf: 'AFC', points: 1426 },
+  { rank: 40, name: 'Uzbekistan', code: 'uz', conf: 'AFC', points: 1418 },
+  { rank: 41, name: 'South Africa', code: 'za', conf: 'CAF', points: 1410 },
+  { rank: 42, name: 'Bosnia and Herzegovina', code: 'ba', conf: 'UEFA', points: 1402 },
+  { rank: 43, name: 'Jordan', code: 'jo', conf: 'AFC', points: 1394 },
+  { rank: 44, name: 'Ghana', code: 'gh', conf: 'CAF', points: 1386 },
+  { rank: 45, name: 'Cabo Verde', code: 'cv', conf: 'CAF', points: 1378 },
+  { rank: 46, name: 'Curaçao', code: 'cw', conf: 'CONCACAF', points: 1360 },
+  { rank: 47, name: 'Haiti', code: 'ht', conf: 'CONCACAF', points: 1345 },
+  { rank: 48, name: 'New Zealand', code: 'nz', conf: 'OFC', points: 1320 },
 ]
 
 export const flagUrl = (code, size = 'w160') =>

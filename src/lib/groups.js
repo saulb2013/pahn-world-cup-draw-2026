@@ -1,26 +1,32 @@
 // Group-stage model for the 48-team World Cup 2026: 12 groups (A–L) of 4.
 //
-// Teams are distributed into groups with a deterministic "serpentine" seeding
-// from the FIFA-rank order (pot 1 across the groups, pot 2 back, etc.) so the
-// groups are balanced and stable across reloads. From the groups we generate a
-// round-robin fixture list, and standings are computed live from scores.
+// These are the OFFICIAL group allocations (by team code, in listed order). From
+// the groups we generate a round-robin fixture list, and standings are computed
+// live from scores.
 
 export const GROUP_LETTERS = 'ABCDEFGHIJKL'.split('')
-const NUM_GROUPS = 12
+
+export const OFFICIAL_GROUPS = {
+  A: ['mx', 'za', 'kr', 'cz'],
+  B: ['ca', 'ba', 'qa', 'ch'],
+  C: ['br', 'ma', 'ht', 'gb-sct'],
+  D: ['us', 'py', 'au', 'tr'],
+  E: ['de', 'cw', 'ci', 'ec'],
+  F: ['nl', 'jp', 'se', 'tn'],
+  G: ['be', 'eg', 'ir', 'nz'],
+  H: ['es', 'cv', 'sa', 'uy'],
+  I: ['fr', 'sn', 'iq', 'no'],
+  J: ['ar', 'dz', 'at', 'jo'],
+  K: ['pt', 'cd', 'uz', 'co'],
+  L: ['gb-eng', 'hr', 'gh', 'pa'],
+}
 
 export function buildGroups(teams) {
-  const sorted = [...teams].sort((a, b) => a.rank - b.rank)
-  const groups = GROUP_LETTERS.map((letter) => ({ letter, teams: [] }))
-
-  sorted.forEach((team, i) => {
-    const pot = Math.floor(i / NUM_GROUPS) // 0..3
-    const posInPot = i % NUM_GROUPS
-    // serpentine: even pots run A→L, odd pots run L→A
-    const groupIndex = pot % 2 === 0 ? posInPot : NUM_GROUPS - 1 - posInPot
-    groups[groupIndex].teams.push(team)
-  })
-
-  return groups
+  const byCode = Object.fromEntries(teams.map((t) => [t.code, t]))
+  return GROUP_LETTERS.map((letter) => ({
+    letter,
+    teams: OFFICIAL_GROUPS[letter].map((code) => byCode[code]).filter(Boolean),
+  }))
 }
 
 // Round-robin pairings for a 4-team group, grouped into 3 matchdays.
