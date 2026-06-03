@@ -4,6 +4,7 @@ import { generateDraw, tallyByParticipant } from './lib/draw.js'
 import { buildGroups, buildFixtures } from './lib/groups.js'
 import { runForecast } from './lib/forecast.js'
 import { fetchState, pushState } from './lib/api.js'
+import { clearState } from './lib/storage.js'
 import { ADMIN_KEY } from './config.js'
 import Setup from './components/Setup.jsx'
 import DrawStage from './components/DrawStage.jsx'
@@ -21,6 +22,20 @@ const PALETTE = [
 
 const SIMS = 2500
 const POLL_MS = 15000
+
+const ALL_CODES = new Set(TEAMS.map((t) => t.code))
+// A draw is valid only if it assigns exactly the current set of 48 teams.
+function validAssignment(assignment) {
+  if (!assignment) return false
+  const codes = new Set()
+  for (const list of Object.values(assignment)) {
+    if (!Array.isArray(list)) return false
+    for (const t of list) codes.add(t.code)
+  }
+  if (codes.size !== ALL_CODES.size) return false
+  for (const c of ALL_CODES) if (!codes.has(c)) return false
+  return true
+}
 
 export default function App() {
   const adminKey = useMemo(() => {
@@ -53,7 +68,10 @@ export default function App() {
 
   const applyState = useCallback((state) => {
     if (state?.knockout !== undefined) setKnockout(state.knockout || null)
-    if (state?.assignment) {
+    // Only accept a draw that covers exactly the current 48 teams — otherwise
+    // it's stale (made against an older team list) and would leave teams with
+    // no owner. A fresh draw replaces it.
+    if (state?.assignment && validAssignment(state.assignment)) {
       setParticipants(state.participants || [])
       setAssignment(state.assignment)
       setScores(state.scores || {})
@@ -69,6 +87,8 @@ export default function App() {
       if (!alive) return
       setBackend(hasBackend)
       const has = applyState(state)
+      // Drop a stale local draw so it doesn't keep reappearing.
+      if (!has && !hasBackend && state?.assignment) clearState()
       if (has) setPhase('done')
       else setPhase(!hasBackend || isAdmin ? 'setup' : 'waiting')
     })
