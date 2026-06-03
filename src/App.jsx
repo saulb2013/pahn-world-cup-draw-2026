@@ -58,6 +58,7 @@ export default function App() {
   const [odds, setOdds] = useState(null)
   const [computing, setComputing] = useState(false)
   const [savedAt, setSavedAt] = useState(null)
+  const [showReset, setShowReset] = useState(false)
 
   // Without a backend everyone is local admin; with one, only the admin key can
   // run/lock the draw and edit scores. This is the lock.
@@ -166,15 +167,14 @@ export default function App() {
     if (res.ok) setSavedAt(Date.now())
   }
 
-  const reset = () => {
-    if (
-      !confirm(
-        'Start a brand new draw? This replaces the current squads and scores for everyone.',
-      )
-    )
-      return
+  // Resetting only takes you to the setup screen; the saved draw on the server
+  // is untouched until you actually complete a NEW draw. But it's destructive
+  // enough that we gate it behind a type-to-confirm modal.
+  const doReset = () => {
+    setShowReset(false)
     setAssignment(null)
     setScores({})
+    setKnockout(null)
     setSteps([])
     setOdds(null)
     setPhase('setup')
@@ -228,7 +228,7 @@ export default function App() {
               </span>
             )}
             {canManage && (
-              <button className="btn ghost sm" onClick={reset}>
+              <button className="btn ghost sm" onClick={() => setShowReset(true)}>
                 New draw
               </button>
             )}
@@ -326,6 +326,48 @@ export default function App() {
             : 'Title odds are model-based (Monte Carlo) and update live with results'}
         </span>
       </footer>
+
+      {showReset && <ResetModal onCancel={() => setShowReset(false)} onConfirm={doReset} />}
+    </div>
+  )
+}
+
+const RESET_PHRASE = 'NEW DRAW'
+
+function ResetModal({ onCancel, onConfirm }) {
+  const [text, setText] = useState('')
+  const ok = text.trim().toUpperCase() === RESET_PHRASE
+
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-icon">⚠️</div>
+        <h3>Start a brand-new draw?</h3>
+        <p>
+          This clears the current squads so you can run the draw again. The
+          existing draw stays saved until you actually finish a new one — but
+          please only do this if you really mean to re-draw for everyone.
+        </p>
+        <p className="modal-instruct">
+          Type <b>{RESET_PHRASE}</b> to confirm:
+        </p>
+        <input
+          className="modal-input"
+          value={text}
+          autoFocus
+          placeholder={RESET_PHRASE}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && ok && onConfirm()}
+        />
+        <div className="modal-actions">
+          <button className="btn ghost" onClick={onCancel}>
+            Cancel
+          </button>
+          <button className="btn danger" disabled={!ok} onClick={onConfirm}>
+            Start new draw
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -103,6 +103,33 @@ h1, h2, h3 { font-family: 'Sora', sans-serif; font-weight: 700; letter-spacing: 
 }
 .btn.ghost:hover { background: var(--card-strong); }
 .btn.ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn.danger { background: linear-gradient(120deg, #e8554e, #c0392b); color: #fff; }
+.btn.danger:hover { box-shadow: 0 12px 28px -12px rgba(232,85,78,0.8); }
+.btn.danger:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
+  background: rgba(8, 4, 16, 0.72); backdrop-filter: blur(4px); padding: 20px;
+  animation: fadeUp 0.15s ease;
+}
+.modal {
+  width: min(440px, 100%); background: linear-gradient(160deg, #241338, #1a0f2c);
+  border: 1px solid var(--border); border-radius: 18px; padding: 28px;
+  box-shadow: 0 30px 70px -20px rgba(0,0,0,0.8); text-align: center;
+}
+.modal-icon { font-size: 34px; margin-bottom: 8px; }
+.modal h3 { margin: 0 0 10px; font-size: 22px; }
+.modal p { color: var(--muted); font-size: 14px; line-height: 1.55; margin: 0 0 12px; }
+.modal-instruct { color: var(--text); }
+.modal-instruct b { color: var(--gold); letter-spacing: 0.05em; }
+.modal-input {
+  width: 100%; font: inherit; text-align: center; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text); background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+  border-radius: 11px; padding: 12px; margin-bottom: 18px;
+}
+.modal-input:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(166,74,201,0.2); }
+.modal-actions { display: flex; gap: 10px; }
+.modal-actions .btn { flex: 1; }
 .icon-btn {
   border: 1px solid var(--border); background: transparent; color: var(--muted);
   width: 34px; height: 34px; border-radius: 9px; cursor: pointer; font-size: 18px; line-height: 1;
