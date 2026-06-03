@@ -1,22 +1,29 @@
-// Live championship-probability engine.
+// Live championship-probability engine (Monte Carlo).
 //
-// Every team's "% chance to win the tournament" is estimated by Monte Carlo:
-// we simulate the rest of the World Cup thousands of times, respecting any real
-// results that have already been entered, and count how often each team lifts
-// the trophy. Because it reads the actual scores, the numbers move as the
-// tournament progresses — teams that are eliminated fall to 0%, survivors rise.
+// Every team's "% chance to win" is estimated by simulating the rest of the
+// World Cup thousands of times, respecting the real results entered so far, and
+// counting how often each team lifts the trophy. It reads the actual scores —
+// group AND knockout — so the numbers move as the tournament progresses:
+// eliminated teams fall to 0%, survivors rise.
 //
-// Match model: expected goals from a team's FIFA-points strength, sampled with
-// a Poisson distribution. Knockout draws are settled by a strength-weighted
-// penalty shootout. Qualification follows the real WC2026 format: 12 group
-// winners + 12 runners-up + the 8 best third-placed teams advance to a 32-team
-// single-elimination bracket seeded by strength.
+// Match model: expected goals from FIFA-points strength, Poisson-sampled.
+// Knockout draws resolve by a strength-weighted shootout. Qualification and the
+// bracket use the shared helpers in knockout.js, so the simulated bracket is the
+// same one shown in the Knockouts tab.
 
-import { GROUP_LETTERS } from './groups.js'
+import { computeStandings, GROUP_LETTERS } from './groups.js'
+import {
+  KO_ROUNDS,
+  cmpRow,
+  selectQualifiers,
+  seededTeams,
+  groupStageComplete,
+  decideWinner,
+} from './knockout.js'
 
 const BASE_GOALS = 1.4
-const GAMMA = 0.4 // strength sensitivity (tuned for a realistic title spread)
-const STRENGTH_REF = 250 // points-difference scale
+const GAMMA = 0.4
+const STRENGTH_REF = 250
 
 function poisson(lambda) {
   const L = Math.exp(-lambda)
@@ -43,7 +50,6 @@ function knockoutWinner(a, b) {
   const [ga, gb] = simScore(a, b)
   if (ga > gb) return a
   if (gb > ga) return b
-  // penalties, weighted slightly by strength
   return Math.random() < a.points / (a.points + b.points) ? a : b
 }
 
@@ -59,12 +65,10 @@ function applyResult(H, A, hg, ag) {
   else { H.D++; A.D++; H.Pts++; A.Pts++ }
 }
 
-// Final standings for one group in a single simulation: real scores where they
-// exist, simulated scores otherwise.
+// One simulated final standings for a group (real scores where present).
 function simGroup(group, groupFixtures, scores) {
   const table = {}
   group.teams.forEach((t) => (table[t.code] = blankRow(t)))
-
   groupFixtures.forEach((f) => {
     const s = scores[f.id]
     let hg, ag
@@ -75,76 +79,31 @@ function simGroup(group, groupFixtures, scores) {
     }
     applyResult(table[f.home.code], table[f.away.code], hg, ag)
   })
-
   return Object.values(table)
     .map((r) => ({ ...r, GD: r.GF - r.GA }))
-    .sort(
-      (a, b) =>
-        b.Pts - a.Pts ||
-        b.GD - a.GD ||
-        b.GF - a.GF ||
-        Math.random() - 0.5,
-    )
-}
-
-// Standard single-elimination seed order (1 meets 2 only in the final).
-function seedOrder(n) {
-  let order = [1, 2]
-  while (order.length < n) {
-    const len = order.length * 2
-    const next = []
-    for (const s of order) {
-      next.push(s)
-      next.push(len + 1 - s)
-    }
-    order = next
-  }
-  return order
-}
-const BRACKET_ORDER = seedOrder(32)
-
-function simTournamentOnce(groups, fixturesByGroup, scores) {
-  const winners = []
-  const runners = []
-  const thirds = []
-
-  groups.forEach((group) => {
-    const rows = simGroup(group, fixturesByGroup[group.letter], scores)
-    winners.push(rows[0])
-    runners.push(rows[1])
-    if (rows[2]) thirds.push(rows[2])
-  })
-
-  const bestThirds = thirds
     .sort((a, b) => b.Pts - a.Pts || b.GD - a.GD || b.GF - a.GF || Math.random() - 0.5)
-    .slice(0, 8)
-
-  // 32 qualifiers, seeded strongest-first by FIFA points.
-  const qualifiers = [...winners, ...runners, ...bestThirds]
-    .map((r) => r.team)
-    .sort((a, b) => b.points - a.points)
-
-  let bracket = BRACKET_ORDER.map((seed) => qualifiers[seed - 1])
-  const reachedFinal = []
-
-  while (bracket.length > 1) {
-    if (bracket.length === 2) reachedFinal.push(bracket[0], bracket[1])
-    const next = []
-    for (let i = 0; i < bracket.length; i += 2) {
-      next.push(knockoutWinner(bracket[i], bracket[i + 1]))
-    }
-    bracket = next
-  }
-
-  return {
-    champion: bracket[0],
-    finalists: reachedFinal,
-    qualifiers,
-  }
 }
 
-// Returns { [teamCode]: { champ, finalist, knockout } } as probabilities 0..1.
-export function runForecast(groups, fixtures, scores, sims = 2000) {
+// Simulate a 32-team bracket. `koScores` lets already-played knockout results
+// be honoured (used once the group stage is complete and the bracket is fixed).
+function simBracket(teams32, koScores) {
+  let feeders = teams32
+  let finalists = []
+  KO_ROUNDS.forEach((round) => {
+    if (round.key === 'F') finalists = [feeders[0], feeders[1]]
+    const next = []
+    for (let i = 0; i < round.matches; i++) {
+      const a = feeders[i * 2]
+      const b = feeders[i * 2 + 1]
+      const fixed = koScores && decideWinner(a, b, koScores[`ko-${round.key}-${i}`])
+      next.push(fixed || knockoutWinner(a, b))
+    }
+    feeders = next
+  })
+  return { champion: feeders[0], finalists }
+}
+
+export function runForecast(groups, fixtures, scores, sims = 2500) {
   const fixturesByGroup = {}
   GROUP_LETTERS.forEach((l) => (fixturesByGroup[l] = []))
   fixtures.forEach((f) => fixturesByGroup[f.group].push(f))
@@ -154,15 +113,33 @@ export function runForecast(groups, fixtures, scores, sims = 2000) {
     g.teams.forEach((t) => (tally[t.code] = { champ: 0, finalist: 0, knockout: 0 })),
   )
 
-  for (let i = 0; i < sims; i++) {
-    const { champion, finalists, qualifiers } = simTournamentOnce(
-      groups,
-      fixturesByGroup,
-      scores,
-    )
-    tally[champion.code].champ++
-    finalists.forEach((t) => tally[t.code].finalist++)
-    qualifiers.forEach((t) => tally[t.code].knockout++)
+  const complete = groupStageComplete(fixtures, scores)
+
+  if (complete) {
+    // Group stage finished -> qualifiers and seeding are fixed. Simulate only
+    // the knockouts, honouring any results already entered.
+    const standings = groups.map((g) => computeStandings(g, fixtures, scores))
+    const { ranked } = selectQualifiers(standings)
+    const teams32 = seededTeams(ranked)
+    teams32.forEach((t) => t && (tally[t.code].knockout = sims))
+    for (let i = 0; i < sims; i++) {
+      const { champion, finalists } = simBracket(teams32, scores)
+      if (champion) tally[champion.code].champ++
+      finalists.forEach((t) => t && tally[t.code].finalist++)
+    }
+  } else {
+    // Group stage in progress -> simulate groups, then knockouts fresh.
+    for (let i = 0; i < sims; i++) {
+      const standings = groups.map((g) =>
+        simGroup(g, fixturesByGroup[g.letter], scores),
+      )
+      const { ranked } = selectQualifiers(standings)
+      const teams32 = seededTeams(ranked)
+      teams32.forEach((t) => t && tally[t.code].knockout++)
+      const { champion, finalists } = simBracket(teams32, null)
+      if (champion) tally[champion.code].champ++
+      finalists.forEach((t) => t && tally[t.code].finalist++)
+    }
   }
 
   const out = {}

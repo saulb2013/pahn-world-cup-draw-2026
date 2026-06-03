@@ -11,6 +11,7 @@ import Results from './components/Results.jsx'
 import Fixtures from './components/Fixtures.jsx'
 import Leaderboard from './components/Leaderboard.jsx'
 import TitleOdds from './components/TitleOdds.jsx'
+import Bracket from './components/Bracket.jsx'
 
 const PALETTE = [
   '#c66be0', '#2d9bf0', '#e8554e', '#27ae60', '#f2a93b',
@@ -74,17 +75,26 @@ export default function App() {
     }
   }, [applyState, isAdmin])
 
-  // Viewers poll for the admin's latest draw + scores.
+  // Viewers stay in sync: poll on an interval AND refetch whenever the tab is
+  // refocused, so a refresh / coming back to the tab always shows latest results.
   const editingRef = useRef(false)
   useEffect(() => {
     if (!backend || isAdmin) return
-    const id = setInterval(() => {
+    const refresh = () => {
       fetchState().then(({ state }) => {
         if (!state) return
         if (applyState(state) && phase !== 'done') setPhase('done')
       })
-    }, POLL_MS)
-    return () => clearInterval(id)
+    }
+    const id = setInterval(refresh, POLL_MS)
+    const onFocus = () => document.visibilityState === 'visible' && refresh()
+    document.addEventListener('visibilitychange', onFocus)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', onFocus)
+      window.removeEventListener('focus', onFocus)
+    }
   }, [backend, isAdmin, applyState, phase])
 
   // Live championship-odds simulation (debounced; recomputes when scores move).
@@ -174,6 +184,7 @@ export default function App() {
     ['leaderboard', 'Leaderboard'],
     ['odds', 'Title Odds'],
     ['fixtures', 'Fixtures & Tables'],
+    ['knockouts', 'Knockouts'],
   ]
 
   return (
@@ -266,6 +277,15 @@ export default function App() {
                 setScore={setScore}
                 ownerOf={ownerOf}
                 colorFor={colorFor}
+                editable={canManage}
+              />
+            )}
+            {tab === 'knockouts' && (
+              <Bracket
+                groups={groups}
+                fixtures={fixtures}
+                scores={scores}
+                setScore={setScore}
                 editable={canManage}
               />
             )}

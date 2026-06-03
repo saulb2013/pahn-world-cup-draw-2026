@@ -15,6 +15,19 @@ FIFA World Cup, then tracks the tournament live:
   drawn nations (live).
 - 🗓️ **Fixtures & Tables** — all 72 group games with editable scores and
   auto-computed group standings, each team badged with its owner.
+- 🏟️ **Knockout bracket** — 32 qualifiers (12 winners + 12 runners-up + 8 best
+  thirds) seeded by group form; enter knockout scores (with penalty-shootout
+  resolution) and teams advance to the trophy. Title odds honour these results
+  too, so they stay accurate to the final whistle.
+
+## How results stay up to date
+
+When the admin enters a score it's saved to the server (debounced). Every
+viewer's page **pulls the latest shared state on load/refresh, auto-polls every
+15 seconds, and re-fetches whenever the tab regains focus** — so a refresh
+always shows current results with no manual sync. The tables, bracket, leaderboard
+and title odds all recompute from that shared `scores` object. (Scores are
+entered by the admin, not auto-scraped from a results feed.)
 
 ## Run locally
 
