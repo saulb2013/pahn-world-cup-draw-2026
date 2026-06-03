@@ -56,7 +56,7 @@ Object.entries({
   iran: 'ir', iriran: 'ir',
   turkey: 'tr', turkiye: 'tr',
   czechrepublic: 'cz', czechia: 'cz',
-  capeverde: 'cv', caboverde: 'cv',
+  capeverde: 'cv', caboverde: 'cv', capeverdeislands: 'cv',
   ivorycoast: 'ci', cotedivoire: 'ci',
   drcongo: 'cd', congodr: 'cd', democraticrepublicofcongo: 'cd', drcongoofcongo: 'cd',
   bosnia: 'ba', bosniaherzegovina: 'ba', bosniaandherzegovina: 'ba',
