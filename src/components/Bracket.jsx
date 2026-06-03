@@ -3,7 +3,10 @@ import { liveBracketTeams, buildKnockout } from '../lib/knockout.js'
 
 export default function Bracket({ groups, fixtures, scores, setScore, editable }) {
   const { teams, complete } = liveBracketTeams(groups, fixtures, scores)
-  const { rounds, champion } = buildKnockout(teams, scores)
+  // Until every group game is played the bracket is genuinely undecided, so we
+  // show all slots as TBC rather than projecting matchups from partial tables.
+  const bracketTeams = complete ? teams : new Array(32).fill(undefined)
+  const { rounds, champion } = buildKnockout(bracketTeams, scores)
   const canEdit = editable && complete
 
   const setVal = (id, side, value) => {
@@ -22,8 +25,8 @@ export default function Bracket({ groups, fixtures, scores, setScore, editable }
             <>Enter knockout scores to advance teams — odds update live.</>
           ) : (
             <strong>
-              Provisional — projected from current standings. Locks for score
-              entry once all group games are played.
+              All ties are to be confirmed — the bracket fills in automatically
+              once every group game has a result.
             </strong>
           )}
         </p>

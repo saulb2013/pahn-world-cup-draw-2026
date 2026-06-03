@@ -232,6 +232,11 @@ h1, h2, h3 { font-family: 'Sora', sans-serif; font-weight: 700; letter-spacing: 
   width: 34px; height: 25px; object-fit: cover; border-radius: 4px; display: block;
   box-shadow: 0 1px 3px rgba(0,0,0,0.45); background: rgba(255,255,255,0.08);
 }
+.flag-tbd {
+  display: grid; place-items: center; color: var(--muted); font-weight: 700;
+  font-size: 13px; background: var(--card-strong); border: 1px dashed var(--border);
+  box-shadow: none;
+}
 
 /* ---------- Results / squads ---------- */
 .squad-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
