@@ -102,6 +102,70 @@ export function buildKnockout(teams32, scores) {
   return { rounds, champion: feeders[0] }
 }
 
+// ---- Feed-driven bracket (football-data.org) ----------------------------
+// When automatic results are on, the real knockout matchups + scores come from
+// the feed (FIFA's official slotting), populating as the tournament unfolds.
+
+export const FEED_STAGES = [
+  ['LAST_32', 'Round of 32'],
+  ['LAST_16', 'Round of 16'],
+  ['QUARTER_FINALS', 'Quarter-finals'],
+  ['SEMI_FINALS', 'Semi-finals'],
+  ['FINAL', 'Final'],
+]
+
+const sortStage = (ms) =>
+  ms.slice().sort((a, b) => (a.utcDate || '').localeCompare(b.utcDate || '') || a.id - b.id)
+const winnerOf = (m, team) =>
+  m.winner === 'HOME' ? team(m.home) : m.winner === 'AWAY' ? team(m.away) : null
+
+// Build display rounds straight from the feed's knockout matches.
+export function feedBracket(koMatches, byCode) {
+  const team = (code) => (code ? byCode[code] || null : null)
+  const rounds = FEED_STAGES.map(([stage, name]) => ({
+    stage,
+    name,
+    matches: sortStage(koMatches.filter((m) => m.stage === stage)).map((m) => ({
+      id: `fko-${m.id}`,
+      date: m.utcDate,
+      a: team(m.home),
+      b: team(m.away),
+      scoreA: m.ftHome,
+      scoreB: m.ftAway,
+      winner: winnerOf(m, team),
+    })),
+  }))
+  const tp = sortStage(koMatches.filter((m) => m.stage === 'THIRD_PLACE'))[0]
+  const thirdPlace = tp
+    ? { a: team(tp.home), b: team(tp.away), scoreA: tp.ftHome, scoreB: tp.ftAway, winner: winnerOf(tp, team) }
+    : null
+  const finalMatches = rounds[rounds.length - 1].matches
+  return { rounds, thirdPlace, champion: finalMatches[0]?.winner || null }
+}
+
+// The 32 R32 teams in feed (bracket) order — or null if not all known yet.
+export function feedR32Teams(koMatches, byCode) {
+  const r32 = sortStage(koMatches.filter((m) => m.stage === 'LAST_32'))
+  if (r32.length !== 16) return null
+  const teams = []
+  for (const m of r32) {
+    if (!m.home || !m.away || !byCode[m.home] || !byCode[m.away]) return null
+    teams.push(byCode[m.home], byCode[m.away])
+  }
+  return teams
+}
+
+// Per-stage arrays of the winning team code (or null) in feed order.
+export function feedStageWinners(koMatches) {
+  const res = {}
+  FEED_STAGES.forEach(([stage]) => {
+    res[stage] = sortStage(koMatches.filter((m) => m.stage === stage)).map((m) =>
+      m.winner === 'HOME' ? m.home : m.winner === 'AWAY' ? m.away : null,
+    )
+  })
+  return res
+}
+
 // Convenience: produce the seeded 32 (provisional if the group stage isn't done)
 // straight from the live standings.
 export function liveBracketTeams(groups, fixtures, scores) {

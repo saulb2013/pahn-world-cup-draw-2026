@@ -1,7 +1,15 @@
 import Flag from './Flag.jsx'
-import { liveBracketTeams, buildKnockout } from '../lib/knockout.js'
+import { liveBracketTeams, buildKnockout, feedBracket } from '../lib/knockout.js'
 
-export default function Bracket({ groups, fixtures, scores, setScore, editable }) {
+export default function Bracket({ groups, fixtures, scores, setScore, editable, koMatches }) {
+  // When automatic results are on, render the real bracket straight from the
+  // feed (FIFA's official matchups + scores, no manual entry).
+  if (koMatches && koMatches.length) {
+    const byCode = {}
+    groups.forEach((g) => g.teams.forEach((t) => (byCode[t.code] = t)))
+    return <FeedBracket data={feedBracket(koMatches, byCode)} />
+  }
+
   const { teams, complete } = liveBracketTeams(groups, fixtures, scores)
   // Until every group game is played the bracket is genuinely undecided, so we
   // show all slots as TBC rather than projecting matchups from partial tables.
@@ -108,6 +116,73 @@ export default function Bracket({ groups, fixtures, scores, setScore, editable }
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function FeedBracket({ data }) {
+  const { rounds, thirdPlace, champion } = data
+  const anyTeams = rounds.some((r) => r.matches.some((m) => m.a || m.b))
+  return (
+    <div className="bracket-wrap">
+      <div className="section-head">
+        <h2>Knockout bracket</h2>
+        <p>
+          Live from the official schedule — matchups and scores fill in
+          automatically as the tournament progresses. No manual entry.
+          {!anyTeams && ' Ties are confirmed once the group stage finishes.'}
+        </p>
+      </div>
+      <div className="bracket-scroll">
+        <div className="bracket">
+          {rounds.map((round) => (
+            <div className={`bk-col bk-${round.stage}`} key={round.stage}>
+              <div className="bk-round-name">{round.name}</div>
+              <div className="bk-matches">
+                {round.matches.map((m) => (
+                  <div className="bk-match" key={m.id}>
+                    <FeedRow team={m.a} score={m.scoreA} win={m.winner && m.a && m.winner.code === m.a.code} />
+                    <FeedRow team={m.b} score={m.scoreB} win={m.winner && m.b && m.winner.code === m.b.code} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div className="bk-col bk-champion-col">
+            <div className="bk-round-name">Champion</div>
+            <div className="bk-champion">
+              <div className="trophy">🏆</div>
+              {champion ? (
+                <>
+                  <Flag code={champion.code} name={champion.name} size="w320" />
+                  <div className="champ-name">{champion.name}</div>
+                </>
+              ) : (
+                <div className="champ-tbd">To be decided</div>
+              )}
+              {thirdPlace && (thirdPlace.a || thirdPlace.b) && (
+                <div className="third-place">
+                  <span className="tp-label">3rd place</span>
+                  <span>{thirdPlace.winner ? thirdPlace.winner.name : 'TBC'}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function FeedRow({ team, score, win }) {
+  if (!team) {
+    return <div className="bk-team tbd"><span className="bk-name">TBD</span></div>
+  }
+  return (
+    <div className={`bk-team ${win ? 'win' : ''}`}>
+      <Flag code={team.code} name={team.name} />
+      <span className="bk-name">{team.name}</span>
+      <span className="bk-score">{score ?? '–'}</span>
     </div>
   )
 }

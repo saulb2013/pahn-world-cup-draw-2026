@@ -69,27 +69,47 @@ OFFICIAL_FIXTURES.forEach((f) => {
   FIX_INDEX[key] = { id: `${f.group}-${f.home}-${f.away}`, home: f.home, away: f.away }
 })
 
-async function fetchResults() {
+const KO_STAGES = new Set([
+  'LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'THIRD_PLACE', 'FINAL',
+])
+
+async function fetchFeed() {
   const res = await fetch('https://api.football-data.org/v4/competitions/WC/matches', {
     headers: { 'X-Auth-Token': FD_KEY },
   })
   if (!res.ok) throw new Error(`football-data ${res.status}`)
   const data = await res.json()
-  const out = {}
+  const scores = {}
+  const knockout = []
   ;(data.matches || []).forEach((m) => {
+    const stage = m.stage || ''
     const ft = m.score?.fullTime
-    if (!ft || ft.home == null || ft.away == null) return
-    const letter = (m.group || '').split('_').pop().toUpperCase()
-    if (!/^[A-L]$/.test(letter)) return // group stage only
-    const homeCode = NAME_TO_CODE[norm(m.homeTeam?.name)]
-    const awayCode = NAME_TO_CODE[norm(m.awayTeam?.name)]
-    if (!homeCode || !awayCode) return
-    const fix = FIX_INDEX[`${letter}|${[homeCode, awayCode].sort().join('-')}`]
-    if (!fix) return
-    out[fix.id] =
-      fix.home === homeCode ? { home: ft.home, away: ft.away } : { home: ft.away, away: ft.home }
+    const homeCode = NAME_TO_CODE[norm(m.homeTeam?.name)] || null
+    const awayCode = NAME_TO_CODE[norm(m.awayTeam?.name)] || null
+
+    if (stage === 'GROUP_STAGE') {
+      const letter = (m.group || '').split('_').pop().toUpperCase()
+      if (!/^[A-L]$/.test(letter) || !homeCode || !awayCode) return
+      if (!ft || ft.home == null || ft.away == null) return
+      const fix = FIX_INDEX[`${letter}|${[homeCode, awayCode].sort().join('-')}`]
+      if (!fix) return
+      scores[fix.id] =
+        fix.home === homeCode ? { home: ft.home, away: ft.away } : { home: ft.away, away: ft.home }
+    } else if (KO_STAGES.has(stage)) {
+      const w = m.score?.winner
+      knockout.push({
+        id: m.id,
+        stage,
+        utcDate: m.utcDate,
+        home: homeCode,
+        away: awayCode,
+        ftHome: ft?.home ?? null,
+        ftAway: ft?.away ?? null,
+        winner: w === 'HOME_TEAM' ? 'HOME' : w === 'AWAY_TEAM' ? 'AWAY' : null,
+      })
+    }
   })
-  return out
+  return { scores, knockout }
 }
 
 // Refresh from the feed if it's stale; returns possibly-updated state.
@@ -101,12 +121,13 @@ async function maybeRefresh(state) {
   s.resultsFetchedAt = now // throttle before awaiting, so viewers don't all fetch
   await setState(s)
   try {
-    const fetched = await fetchResults()
-    s.scores = { ...(s.scores || {}), ...fetched }
+    const feed = await fetchFeed()
+    s.scores = { ...(s.scores || {}), ...feed.scores }
+    s.knockout = feed.knockout
     s.updatedAt = now
     await setState(s)
   } catch {
-    /* leave existing scores in place on any feed error */
+    /* leave existing data in place on any feed error */
   }
   return s
 }
@@ -137,6 +158,7 @@ export default async function handler(req, res) {
         participants: body.participants || [],
         assignment: body.assignment || null,
         scores: body.scores || {},
+        knockout: prev.knockout || null,
         resultsFetchedAt: prev.resultsFetchedAt || 0,
         updatedAt: Date.now(),
       }

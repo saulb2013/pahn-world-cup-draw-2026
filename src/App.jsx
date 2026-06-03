@@ -37,6 +37,7 @@ export default function App() {
   const [participants, setParticipants] = useState([])
   const [assignment, setAssignment] = useState(null)
   const [scores, setScores] = useState({})
+  const [knockout, setKnockout] = useState(null)
   const [steps, setSteps] = useState([])
   const [tab, setTab] = useState('squads')
   const [odds, setOdds] = useState(null)
@@ -51,6 +52,7 @@ export default function App() {
   const fixtures = useMemo(() => buildFixtures(groups), [groups])
 
   const applyState = useCallback((state) => {
+    if (state?.knockout !== undefined) setKnockout(state.knockout || null)
     if (state?.assignment) {
       setParticipants(state.participants || [])
       setAssignment(state.assignment)
@@ -102,11 +104,11 @@ export default function App() {
     if (phase !== 'done') return
     setComputing(true)
     const t = setTimeout(() => {
-      setOdds(runForecast(groups, fixtures, scores, SIMS))
+      setOdds(runForecast(groups, fixtures, scores, SIMS, knockout))
       setComputing(false)
     }, 200)
     return () => clearTimeout(t)
-  }, [phase, groups, fixtures, scores])
+  }, [phase, groups, fixtures, scores, knockout])
 
   // Persist scores (admin / local) — debounced.
   const firstScores = useRef(true)
@@ -287,6 +289,7 @@ export default function App() {
                 scores={scores}
                 setScore={setScore}
                 editable={canManage}
+                koMatches={knockout}
               />
             )}
           </>

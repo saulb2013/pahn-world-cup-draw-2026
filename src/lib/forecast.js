@@ -14,11 +14,14 @@
 import { computeStandings, GROUP_LETTERS } from './groups.js'
 import {
   KO_ROUNDS,
+  FEED_STAGES,
   cmpRow,
   selectQualifiers,
   seededTeams,
   groupStageComplete,
   decideWinner,
+  feedR32Teams,
+  feedStageWinners,
 } from './knockout.js'
 
 const BASE_GOALS = 1.4
@@ -103,15 +106,57 @@ function simBracket(teams32, koScores) {
   return { champion: feeders[0], finalists }
 }
 
-export function runForecast(groups, fixtures, scores, sims = 2500) {
+// Simulate the live feed bracket, honouring real results by feed slot.
+function simFeedBracket(r32, stageWinners) {
+  let feeders = r32
+  let finalists = []
+  FEED_STAGES.forEach(([stage]) => {
+    if (stage === 'FINAL') finalists = [feeders[0], feeders[1]]
+    const next = []
+    for (let i = 0; i < feeders.length; i += 2) {
+      const a = feeders[i]
+      const b = feeders[i + 1]
+      const wc = stageWinners[stage]?.[i / 2]
+      let w
+      if (wc && (a.code === wc || b.code === wc)) w = a.code === wc ? a : b
+      else w = knockoutWinner(a, b)
+      next.push(w)
+    }
+    feeders = next
+  })
+  return { champion: feeders[0], finalists }
+}
+
+export function runForecast(groups, fixtures, scores, sims = 2500, koMatches = null) {
   const fixturesByGroup = {}
   GROUP_LETTERS.forEach((l) => (fixturesByGroup[l] = []))
   fixtures.forEach((f) => fixturesByGroup[f.group].push(f))
+
+  const byCode = {}
+  groups.forEach((g) => g.teams.forEach((t) => (byCode[t.code] = t)))
 
   const tally = {}
   groups.forEach((g) =>
     g.teams.forEach((t) => (tally[t.code] = { champ: 0, finalist: 0, knockout: 0 })),
   )
+
+  // If the real knockout bracket is set (auto results), simulate THAT — it
+  // honours actual matchups and results, so eliminated teams drop to 0%.
+  const feedR32 = koMatches ? feedR32Teams(koMatches, byCode) : null
+  if (feedR32) {
+    const stageWinners = feedStageWinners(koMatches)
+    feedR32.forEach((t) => (tally[t.code].knockout = sims))
+    for (let i = 0; i < sims; i++) {
+      const { champion, finalists } = simFeedBracket(feedR32, stageWinners)
+      if (champion) tally[champion.code].champ++
+      finalists.forEach((t) => t && tally[t.code].finalist++)
+    }
+    const out = {}
+    Object.entries(tally).forEach(([code, c]) => {
+      out[code] = { champ: c.champ / sims, finalist: c.finalist / sims, knockout: c.knockout / sims }
+    })
+    return out
+  }
 
   const complete = groupStageComplete(fixtures, scores)
 
