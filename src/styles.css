@@ -298,9 +298,42 @@ h1, h2, h3 { font-family: 'Sora', sans-serif; font-weight: 700; letter-spacing: 
 .standings tr.qualify td.left { box-shadow: inset 3px 0 0 var(--green); }
 .standings .pts { font-weight: 800; color: var(--gold); }
 .owner-chip { font-size: 10px; font-weight: 700; color: #fff; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+.owner-chip.sm { font-size: 9px; padding: 1px 6px; }
 
-.match-list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 14px; }
-.match { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+/* Fixtures header + view toggle */
+.fixtures-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.view-toggle { display: flex; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 4px; flex: none; }
+.view-toggle button {
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: transparent;
+  color: var(--muted); padding: 7px 14px; border-radius: 7px; transition: all 0.15s;
+}
+.view-toggle button.on { background: linear-gradient(120deg, var(--purple-light), var(--purple)); color: #fff; }
+
+/* Schedule (by date) view */
+.schedule { display: flex; flex-direction: column; gap: 22px; max-width: 760px; }
+.sch-day { display: flex; flex-direction: column; gap: 7px; }
+.sch-date {
+  font-family: 'Sora'; font-weight: 700; font-size: 14px; color: var(--purple-bright);
+  padding-bottom: 6px; border-bottom: 1px solid var(--border); margin-bottom: 3px;
+}
+.sch-match {
+  display: grid; grid-template-columns: 48px 26px 1fr auto 1fr; align-items: center; gap: 10px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 11px; padding: 9px 14px;
+}
+.sch-time { font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 600; color: var(--muted); }
+.sch-grp {
+  font-family: 'Sora'; font-weight: 700; font-size: 12px; color: var(--text);
+  background: var(--card-strong); border-radius: 6px; text-align: center; padding: 3px 0;
+}
+.sch-team { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 13.5px; }
+.sch-team.home { justify-content: flex-end; text-align: right; }
+.sch-team.away { justify-content: flex-start; }
+.sch-team .flag { width: 26px; height: 19px; }
+
+.match-list { margin-top: 14px; display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--border); padding-top: 14px; }
+.match { display: flex; flex-direction: column; gap: 3px; }
+.match-meta { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; text-align: center; }
+.match-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
 .match-side { display: flex; align-items: center; gap: 7px; font-size: 13px; }
 .match-side.home { justify-content: flex-end; text-align: right; }
 .match-side.away { justify-content: flex-start; }

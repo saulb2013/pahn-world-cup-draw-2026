@@ -4,6 +4,8 @@
 // the groups we generate a round-robin fixture list, and standings are computed
 // live from scores.
 
+import { OFFICIAL_FIXTURES } from '../data/fixtures.js'
+
 export const GROUP_LETTERS = 'ABCDEFGHIJKL'.split('')
 
 export const OFFICIAL_GROUPS = {
@@ -29,33 +31,20 @@ export function buildGroups(teams) {
   }))
 }
 
-// Round-robin pairings for a 4-team group, grouped into 3 matchdays.
-const RR_PAIRS = [
-  [0, 1],
-  [2, 3],
-  [0, 2],
-  [1, 3],
-  [3, 0],
-  [1, 2],
-]
-
+// Build the fixture list from the official schedule, preserving its order.
 export function buildFixtures(groups) {
-  const fixtures = []
-  groups.forEach((group) => {
-    RR_PAIRS.forEach(([h, a], idx) => {
-      const home = group.teams[h]
-      const away = group.teams[a]
-      if (!home || !away) return
-      fixtures.push({
-        id: `${group.letter}-${home.code}-${away.code}`,
-        group: group.letter,
-        matchday: Math.floor(idx / 2) + 1,
-        home,
-        away,
-      })
-    })
-  })
-  return fixtures
+  const byCode = {}
+  groups.forEach((g) => g.teams.forEach((t) => (byCode[t.code] = t)))
+  return OFFICIAL_FIXTURES.map((f, i) => ({
+    id: `${f.group}-${f.home}-${f.away}`,
+    group: f.group,
+    date: f.date,
+    time: f.time,
+    order: i,
+    matchday: Math.floor(i / 24) + 1,
+    home: byCode[f.home],
+    away: byCode[f.away],
+  })).filter((f) => f.home && f.away)
 }
 
 // scores: { [fixtureId]: { home: number, away: number } }
