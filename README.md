@@ -81,6 +81,28 @@ free Redis store for shared draw/scores.
 > Without the Redis store the app still works, but in local-only mode (no shared
 > state). The shared/locked experience needs steps 2–3.
 
+## Automatic results (optional — no manual score entry)
+
+If you set a `FOOTBALL_DATA_KEY` env var, the app pulls **finished group-stage
+results automatically** from [football-data.org](https://www.football-data.org)
+and merges them into the shared scores — tables, bracket, leaderboard and title
+odds then update on their own, with nobody typing scores.
+
+How it works: the `/api/state` GET endpoint self-refreshes — when the page is
+loaded/polled and the last fetch was over ~2 minutes ago, it fetches results,
+maps each match to our fixtures by team + group, and saves. One throttled fetch
+serves all viewers (well inside the free rate limit). No cron job needed.
+
+To enable:
+1. Create a free key at https://www.football-data.org/client/register
+2. On Vercel: Settings → Environment Variables → add `FOOTBALL_DATA_KEY` = your key
+3. Redeploy.
+
+Notes: the feed covers **group-stage** matches (knockout ties stay manual,
+since our bracket seeding differs from FIFA's official slotting). Manual admin
+scores still work and are kept for any match the feed hasn't reported yet. Leave
+`FOOTBALL_DATA_KEY` unset to stay fully manual.
+
 ## Project structure
 
 ```
