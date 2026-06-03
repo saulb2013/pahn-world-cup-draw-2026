@@ -252,7 +252,7 @@ export default function App() {
             </nav>
 
             {tab === 'squads' && (
-              <Results assignment={assignment} participants={participants} odds={odds} />
+              <Results assignment={assignment} participants={participants} />
             )}
             {tab === 'leaderboard' && (
               <Leaderboard
