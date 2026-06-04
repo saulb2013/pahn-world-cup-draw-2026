@@ -10,4 +10,4 @@
 // With no server/database configured, the app runs in local-only mode and this
 // key is ignored.
 
-export const ADMIN_KEY = 'elucidate'
+export const ADMIN_KEY = 'pahn'

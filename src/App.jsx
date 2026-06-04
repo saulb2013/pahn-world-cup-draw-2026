@@ -120,7 +120,23 @@ export default function App() {
     }
   }, [backend, isAdmin, applyState, phase])
 
-  // Live championship-odds simulation (debounced; recomputes when scores move).
+  // A stable fingerprint of only the *completed* results — group games with both
+  // scores entered, plus the knockout bracket. The Monte Carlo forecast uses
+  // randomness, so we recompute ONLY when this changes: i.e. once per game that
+  // comes in, not on every poll, re-render or half-typed score.
+  const resultsSig = useMemo(() => {
+    const done = []
+    for (const f of fixtures) {
+      const s = scores[f.id]
+      if (s && s.home !== '' && s.away !== '' && s.home != null && s.away != null) {
+        done.push(`${f.id}:${s.home}-${s.away}`)
+      }
+    }
+    done.sort()
+    return done.join('|') + '#' + (knockout ? JSON.stringify(knockout) : '')
+  }, [fixtures, scores, knockout])
+
+  // Championship-odds simulation — recomputes only when a result changes.
   useEffect(() => {
     if (phase !== 'done') return
     setComputing(true)
@@ -129,7 +145,10 @@ export default function App() {
       setComputing(false)
     }, 200)
     return () => clearTimeout(t)
-  }, [phase, groups, fixtures, scores, knockout])
+    // scores/knockout are intentionally excluded: resultsSig already captures
+    // every meaningful change, so identical re-polls don't re-roll the odds.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, groups, fixtures, resultsSig])
 
   // Persist scores (admin / local) — debounced.
   const firstScores = useRef(true)
@@ -204,8 +223,8 @@ export default function App() {
 
   const TABS = [
     ['squads', 'Squads'],
-    ['leaderboard', 'Leaderboard'],
     ['odds', 'Title Odds'],
+    ['leaderboard', 'Leaderboard'],
     ['fixtures', 'Fixtures & Tables'],
     ['knockouts', 'Knockouts'],
   ]
@@ -214,7 +233,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <img src="/elucidate-logo.png" alt="Elucidate" className="brand-logo" />
+          <img src="/pahn-logo.svg" alt="PAHN" className="brand-logo" />
           <span className="brand-divider" />
           <div className="brand-text">
             <span className="brand-event">World Cup 2026</span>
@@ -318,7 +337,7 @@ export default function App() {
       </main>
 
       <footer className="footer">
-        <span>Built for Elucidate · FIFA World Cup 2026</span>
+        <span>Built for PAHN · FIFA World Cup 2026</span>
         <span className="footer-note">
           {backend
             ? isAdmin

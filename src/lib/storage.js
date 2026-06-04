@@ -1,5 +1,5 @@
 // Tiny localStorage wrapper so the draw + scores survive a refresh.
-const KEY = 'elucidate-wc2026-v1'
+const KEY = 'pahn-wc2026-v1'
 
 export function loadState() {
   try {

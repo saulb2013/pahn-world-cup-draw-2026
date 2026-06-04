@@ -20,7 +20,7 @@ import { TEAMS } from '../src/data/teams.js'
 import { OFFICIAL_FIXTURES } from '../src/data/fixtures.js'
 
 const KEY = 'wc2026:state'
-const ADMIN_KEY = process.env.ADMIN_KEY || 'elucidate'
+const ADMIN_KEY = process.env.ADMIN_KEY || 'pahn'
 const FD_KEY = process.env.FOOTBALL_DATA_KEY
 const REFRESH_MS = 120000 // pull live results at most this often
 

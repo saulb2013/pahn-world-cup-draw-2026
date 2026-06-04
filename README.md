@@ -1,4 +1,4 @@
-# Elucidate · World Cup 2026 Sweepstake Draw
+# PAHN · World Cup 2026 Sweepstake Draw
 
 A polished React app that runs a **fair, animated sweepstake draw** for the 2026
 FIFA World Cup, then tracks the tournament live:
