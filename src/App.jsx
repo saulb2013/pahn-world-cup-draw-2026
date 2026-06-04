@@ -167,10 +167,10 @@ export default function App() {
     if (res.ok) setSavedAt(Date.now())
   }
 
-  // Resetting only takes you to the setup screen; the saved draw on the server
-  // is untouched until you actually complete a NEW draw. But it's destructive
-  // enough that we gate it behind a type-to-confirm modal.
-  const doReset = () => {
+  // Resetting clears the shared draw immediately (you confirmed via the
+  // type-to-confirm modal), so it doesn't reappear for you or the team — then
+  // takes you to the setup screen to make the new one.
+  const doReset = async () => {
     setShowReset(false)
     setAssignment(null)
     setScores({})
@@ -178,6 +178,7 @@ export default function App() {
     setSteps([])
     setOdds(null)
     setPhase('setup')
+    if (canManage) await pushState({ participants: [], assignment: null, scores: {} }, adminKey)
   }
 
   const setScore = (id, side, value) => {
