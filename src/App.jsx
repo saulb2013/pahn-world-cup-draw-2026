@@ -233,7 +233,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <img src="/pahn-logo.svg" alt="PAHN" className="brand-logo" />
+          <img src="/pahn-logo.png" alt="PAHN" className="brand-logo" />
           <span className="brand-divider" />
           <div className="brand-text">
             <span className="brand-event">World Cup 2026</span>
