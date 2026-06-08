@@ -449,6 +449,27 @@ h1, h2, h3 { font-family: 'Sora', sans-serif; font-weight: 700; letter-spacing: 
 @keyframes lockpop { 0% { transform: scale(0.7); } 60% { transform: scale(1.08); } 100% { transform: scale(1); } }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+/* ---------- Top-level game switch ---------- */
+.mode-switch {
+  display: flex; gap: 6px; margin: 0 auto 26px; padding: 6px; width: fit-content;
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+}
+.mode-switch button {
+  font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; border: none;
+  background: transparent; color: var(--muted); padding: 11px 28px; border-radius: 10px;
+  transition: all 0.15s; white-space: nowrap;
+}
+.mode-switch button:hover { color: var(--text); }
+.mode-switch button.on { background: #fff; color: #0a0a0a; }
+
+/* ---------- Pool game ---------- */
+.pool-admin-bar { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.pool-tag {
+  width: 22px; height: 22px; flex: none; display: grid; place-items: center;
+  border-radius: 6px; background: var(--card-strong); color: var(--muted);
+  font-family: 'Sora'; font-size: 11px; font-weight: 800;
+}
+
 /* ---------- Responsive / mobile ---------- */
 @media (max-width: 760px) {
   .main { padding: 18px 14px 36px; }
@@ -478,6 +499,9 @@ h1, h2, h3 { font-family: 'Sora', sans-serif; font-weight: 700; letter-spacing: 
   .lede { font-size: 15px; }
 
   .footer { flex-direction: column; gap: 4px; padding: 16px 14px; }
+
+  .mode-switch { width: 100%; }
+  .mode-switch button { flex: 1; padding: 11px 8px; font-size: 14px; }
 }
 
 @media (max-width: 480px) {

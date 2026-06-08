@@ -29,8 +29,9 @@ if (fs.existsSync(envFile)) {
   }
 }
 
-// Imported AFTER env is loaded, since api/state.js reads process.env at import.
+// Imported AFTER env is loaded, since the handlers read process.env at import.
 const { default: handler } = await import('./api/state.js')
+const { default: poolHandler } = await import('./api/pool.js')
 
 const app = express()
 app.use(express.json())
@@ -38,6 +39,8 @@ app.use(express.json())
 // Shared draw + live scores (GET read / POST admin-write). Mounted before the
 // static + SPA fallback so it always wins.
 app.all('/api/state', (req, res) => handler(req, res))
+// Pool game's separate draw (GET read / POST admin-write).
+app.all('/api/pool', (req, res) => poolHandler(req, res))
 
 // Static front-end, then SPA fallback so client routes resolve to index.html.
 app.use(express.static(dist))

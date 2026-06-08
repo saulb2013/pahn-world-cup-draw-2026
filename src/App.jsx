@@ -13,6 +13,7 @@ import Fixtures from './components/Fixtures.jsx'
 import Leaderboard from './components/Leaderboard.jsx'
 import TitleOdds from './components/TitleOdds.jsx'
 import Bracket from './components/Bracket.jsx'
+import PoolGame from './components/PoolGame.jsx'
 
 const PALETTE = [
   '#c66be0', '#2d9bf0', '#e8554e', '#27ae60', '#f2a93b',
@@ -48,6 +49,7 @@ export default function App() {
   const isAdmin = adminKey === ADMIN_KEY
 
   const [phase, setPhase] = useState('loading') // loading|setup|drawing|done|waiting
+  const [mode, setMode] = useState('sweepstake') // sweepstake | pool — top-level game
   const [backend, setBackend] = useState(false)
   const [participants, setParticipants] = useState([])
   const [assignment, setAssignment] = useState(null)
@@ -237,10 +239,10 @@ export default function App() {
           <span className="brand-divider" />
           <div className="brand-text">
             <span className="brand-event">World Cup 2026</span>
-            <span className="brand-sub">Sweepstake Draw</span>
+            <span className="brand-sub">{mode === 'pool' ? 'Pool Game' : 'Sweepstake Draw'}</span>
           </div>
         </div>
-        {phase === 'done' && (
+        {mode === 'sweepstake' && phase === 'done' && (
           <div className="topbar-actions">
             {backend && (
               <span className={`mode-badge ${isAdmin ? 'admin' : ''}`}>
@@ -263,6 +265,26 @@ export default function App() {
             <p>Loading the draw…</p>
           </div>
         )}
+
+        {phase !== 'loading' && (
+          <div className="mode-switch">
+            <button
+              className={mode === 'sweepstake' ? 'on' : ''}
+              onClick={() => setMode('sweepstake')}
+            >
+              Sweepstake Draw
+            </button>
+            <button
+              className={mode === 'pool' ? 'on' : ''}
+              onClick={() => setMode('pool')}
+            >
+              Pool Game
+            </button>
+          </div>
+        )}
+
+        {mode === 'sweepstake' && phase !== 'loading' && (
+          <>
 
         {phase === 'waiting' && (
           <div className="centered-msg">
@@ -333,6 +355,17 @@ export default function App() {
               />
             )}
           </>
+        )}
+          </>
+        )}
+
+        {mode === 'pool' && phase !== 'loading' && (
+          <PoolGame
+            results={{ groups, fixtures, scores, knockout }}
+            backend={backend}
+            isAdmin={isAdmin}
+            adminKey={adminKey}
+          />
         )}
       </main>
 
