@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Flag from './Flag.jsx'
 import PoolDrawStage from './PoolDrawStage.jsx'
+import { createMusic } from '../lib/music.js'
 import { drawPools, scorePlayers, teamByCode, matchBreakdown } from '../lib/poolgame.js'
 import { POOL_LETTERS, POOL_NAMES, POOLS } from '../data/pools.js'
 import { fetchPool, pushPool } from '../lib/poolApi.js'
@@ -384,6 +385,7 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
   const [draft, setDraft] = useState(null)
   const [tab, setTab] = useState('leaderboard')
   const [confirmReset, setConfirmReset] = useState(false)
+  const musicRef = useRef(null)
 
   const canManage = !backend || isAdmin
 
@@ -469,6 +471,17 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
   // commit when the reveal finishes.
   const runDraw = (names) => {
     const { assignment: a, steps: s } = drawPools(names)
+    // Start the anthem HERE, inside the click gesture, so the browser's autoplay
+    // policy never blocks it (creating audio a tick later in an effect can be
+    // left suspended). PoolDrawStage just controls mute and stops it on finish.
+    try {
+      musicRef.current?.stop()
+      const m = createMusic()
+      m.start()
+      musicRef.current = m
+    } catch {
+      /* audio unavailable — draw still runs */
+    }
     setParticipants(names)
     setDraft(a)
     setSteps(s)
@@ -476,11 +489,15 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
   }
 
   const finishDraw = async () => {
+    musicRef.current?.stop()
     setAssignment(draft)
     setPhase('done')
     setTab('squads')
     if (canManage) await pushPool({ participants, assignment: draft }, adminKey)
   }
+
+  // Stop the anthem if we leave the pool game mid-draw.
+  useEffect(() => () => musicRef.current?.stop(), [])
 
   const doReset = async () => {
     setConfirmReset(false)
@@ -517,7 +534,14 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
   if (phase === 'setup') return <PoolSetup onRun={runDraw} />
 
   if (phase === 'drawing')
-    return <PoolDrawStage steps={steps} participants={participants} onComplete={finishDraw} />
+    return (
+      <PoolDrawStage
+        steps={steps}
+        participants={participants}
+        music={musicRef.current}
+        onComplete={finishDraw}
+      />
+    )
 
   return (
     <>

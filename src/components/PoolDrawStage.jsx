@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import confetti from 'canvas-confetti'
 import { TEAMS } from '../data/teams.js'
-import { createMusic } from '../lib/music.js'
 import { teamByCode } from '../lib/poolgame.js'
 import { POOL_LETTERS, POOL_NAMES, POOLS, POOL_PTS } from '../data/pools.js'
 import Flag from './Flag.jsx'
@@ -13,7 +12,9 @@ const FLICKER_MS = 55
 
 // Animated reveal for the pool game's random draw — one team per pool dealt to
 // each player, pool by pool. Mirrors the sweepstake DrawStage.
-export default function PoolDrawStage({ steps, participants, onComplete }) {
+// The anthem is created + started in PoolGame's "Run the draw" click (so the
+// browser autoplay policy never blocks it); this component just controls mute.
+export default function PoolDrawStage({ steps, participants, music, onComplete }) {
   const [index, setIndex] = useState(0)
   const [display, setDisplay] = useState(() => teamByCode(steps[0]?.code))
   const [locked, setLocked] = useState(false)
@@ -25,19 +26,11 @@ export default function PoolDrawStage({ steps, participants, onComplete }) {
   speedRef.current = speed
 
   const [muted, setMuted] = useState(false)
-  const musicRef = useRef(null)
-
-  useEffect(() => {
-    const music = createMusic()
-    musicRef.current = music
-    music.start()
-    return () => music.stop()
-  }, [])
 
   const toggleMute = () => {
     setMuted((m) => {
       const next = !m
-      musicRef.current?.setMuted(next)
+      music?.setMuted(next)
       return next
     })
   }
