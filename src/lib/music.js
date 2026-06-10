@@ -133,7 +133,30 @@ export function createMusic() {
       try {
         ensure()
         if (!ctx) return
-        if (ctx.state === 'suspended') ctx.resume()
+
+        const resumeCtx = () => {
+          try {
+            if (ctx && ctx.state === 'suspended') ctx.resume()
+          } catch {
+            /* ignore */
+          }
+        }
+        resumeCtx()
+
+        // Autoplay safety net: if the browser left the context suspended (the
+        // click that triggered the draw is a tick away by the time this effect
+        // runs), resume on the very next user interaction.
+        if (ctx.state === 'suspended') {
+          const events = ['pointerdown', 'keydown', 'touchstart', 'click']
+          const onGesture = () => {
+            resumeCtx()
+            events.forEach((e) => window.removeEventListener(e, onGesture))
+          }
+          events.forEach((e) =>
+            window.addEventListener(e, onGesture, { passive: true }),
+          )
+        }
+
         step = 0
         nextTime = ctx.currentTime + 0.08
         master.gain.cancelScheduledValues(ctx.currentTime)
