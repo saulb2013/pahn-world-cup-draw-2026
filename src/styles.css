@@ -470,10 +470,20 @@ h1, h2, h3 { font-family: 'Sora', sans-serif; font-weight: 700; letter-spacing: 
   font-family: 'Sora'; font-size: 11px; font-weight: 800;
 }
 
-/* ---------- Pool game: draw pools side panel ---------- */
-.draw-mid { display: flex; gap: 18px; align-items: flex-start; }
-.draw-mid .reveal { flex: 1; min-width: 0; }
-.draw-pools { width: 280px; flex: none; display: flex; flex-direction: column; gap: 8px; }
+/* ---------- Pool game: compact draw (pools + board side by side) ---------- */
+.draw-mid { display: flex; gap: 16px; align-items: flex-start; }
+.draw-mid .draw-board { flex: 1; min-width: 0; margin: 0; }
+
+/* Shrink the moving reveal into a slim banner so far more fits on screen. */
+.pool-draw .reveal { min-height: auto; padding: 2px 0 14px; }
+.pool-draw .reveal-card { flex-direction: row; align-items: center; gap: 16px; padding: 12px 22px; }
+.pool-draw .reveal-flag { width: 86px !important; height: 58px !important; }
+.pool-draw .reveal-name { font-size: 22px; }
+.pool-draw .reveal-player { font-size: 17px; padding: 5px 14px; }
+.pool-draw .draw-board { grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 8px; }
+.pool-draw .board-flag .flag { width: 26px; height: 19px; }
+
+.draw-pools { width: 240px; flex: none; display: flex; flex-direction: column; gap: 8px; }
 .draw-pool {
   background: var(--card); border: 1px solid var(--border); border-radius: 12px;
   padding: 9px 12px; transition: border 0.2s, box-shadow 0.2s, transform 0.2s;

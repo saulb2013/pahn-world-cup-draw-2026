@@ -98,7 +98,7 @@ export default function PoolDrawStage({ steps, participants, onComplete }) {
   const team = display
 
   return (
-    <div className="draw">
+    <div className="draw pool-draw">
       <div className="draw-head">
         <div className="draw-progress">
           <span className="pool-pill">
@@ -139,8 +139,7 @@ export default function PoolDrawStage({ steps, participants, onComplete }) {
         </div>
       </div>
 
-      <div className="draw-mid">
-        <div className="reveal">
+      <div className="reveal">
           {done ? (
             <div className="reveal-done">
               <div className="big-check">✓</div>
@@ -159,8 +158,9 @@ export default function PoolDrawStage({ steps, participants, onComplete }) {
               )}
             </div>
           )}
-        </div>
+      </div>
 
+      <div className="draw-mid">
         <aside className="draw-pools">
           {POOL_LETTERS.map((letter) => {
             const active = !done && current?.letter === letter
@@ -195,9 +195,8 @@ export default function PoolDrawStage({ steps, participants, onComplete }) {
             )
           })}
         </aside>
-      </div>
 
-      <div className="draw-board">
+        <div className="draw-board">
         {participants.map((p) => {
           const last = assigned[p][assigned[p].length - 1]
           const justGot = locked && current?.player === p
@@ -224,6 +223,7 @@ export default function PoolDrawStage({ steps, participants, onComplete }) {
             </div>
           )
         })}
+        </div>
       </div>
     </div>
   )
