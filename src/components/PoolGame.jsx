@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import confetti from 'canvas-confetti'
 import Flag from './Flag.jsx'
+import PoolDrawStage from './PoolDrawStage.jsx'
 import { drawPools, scorePlayers, teamByCode } from '../lib/poolgame.js'
 import { POOL_LETTERS, POOL_NAMES, POOLS } from '../data/pools.js'
 import { fetchPool, pushPool } from '../lib/poolApi.js'
@@ -211,11 +211,108 @@ function PoolReference() {
   )
 }
 
+// ---- How it works -------------------------------------------------------
+const ROUND_ROWS = [
+  ['Group stage', '×1'],
+  ['Round of 32', '×2'],
+  ['Round of 16', '×3'],
+  ['Quarter-final', '×4'],
+  ['Semi-final', '×5'],
+  ['Final (winner only)', '×6'],
+]
+
+function PoolRules() {
+  return (
+    <div className="rules">
+      <div className="section-head">
+        <h2>How it works</h2>
+        <p>Everything you need to know about the pool game — the draw, and how points add up.</p>
+      </div>
+
+      <div className="rule-card">
+        <h3>🎲 The draw</h3>
+        <p>
+          The 48 nations are split into <strong>six pools (A–F)</strong> by strength —
+          Pool&nbsp;A is the elite favourites, Pool&nbsp;F the underdogs. Every player
+          is randomly dealt <strong>one team from each pool</strong>, so everyone ends up
+          with a balanced squad of <strong>six teams</strong>. No picking — it's pure luck of the draw.
+        </p>
+      </div>
+
+      <div className="rule-card">
+        <h3>🔢 Every team has a ranking</h3>
+        <p>
+          Each team carries a fixed <strong>ranking number</strong> (see the “Pools &amp; Rankings” tab).
+          Stronger teams have a <strong>low</strong> number; underdogs a <strong>high</strong> one.
+          That number is your <strong>points multiplier</strong> — so an underdog that goes on a run
+          is worth far more than a favourite doing the same.
+        </p>
+      </div>
+
+      <div className="rule-card">
+        <h3>⚽ Points per result</h3>
+        <p>For each match one of your teams plays, you earn:</p>
+        <ul className="rule-list">
+          <li><span className="rule-key win">Win</span> ranking × 3</li>
+          <li><span className="rule-key draw">Draw</span> ranking × 1</li>
+          <li><span className="rule-key loss">Loss</span> 0</li>
+        </ul>
+        <p className="rule-fine">A win on penalties counts as a win.</p>
+      </div>
+
+      <div className="rule-card">
+        <h3>📈 The deeper they go, the more it's worth</h3>
+        <p>
+          Points earned in each round are multiplied — so results matter much more
+          in the knockouts than in the group stage:
+        </p>
+        <table className="rule-table">
+          <tbody>
+            {ROUND_ROWS.map(([round, mult]) => (
+              <tr key={round}>
+                <td>{round}</td>
+                <td className="rule-mult">{mult}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="rule-card rule-example">
+        <h3>🧮 A worked example</h3>
+        <p>
+          Say you draw a team with ranking <strong>8</strong>. In the group stage they win
+          twice and draw once:
+        </p>
+        <p className="rule-calc">
+          (8 × 3) + (8 × 3) + (8 × 1) = <strong>56 pts</strong> &nbsp;<span className="rule-fine">(group ×1)</span>
+        </p>
+        <p>They then win their Round of 32 match (×2):</p>
+        <p className="rule-calc">
+          8 × 3 × 2 = <strong>48 pts</strong>
+        </p>
+        <p>So far that's <strong>104 points</strong> from one team — and it keeps growing the further they advance.</p>
+      </div>
+
+      <div className="rule-card">
+        <h3>🏆 Your total</h3>
+        <p>
+          Your score is simply <strong>all six of your teams' points added together</strong>,
+          updated live after every result. Highest total wins. The 3rd/4th-place play-off
+          doesn't count.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // ---- Main ---------------------------------------------------------------
 export default function PoolGame({ results, backend, isAdmin, adminKey }) {
-  const [phase, setPhase] = useState('loading') // loading | setup | done | waiting
+  const [phase, setPhase] = useState('loading') // loading | setup | drawing | done | waiting
   const [participants, setParticipants] = useState([])
   const [assignment, setAssignment] = useState(null)
+  const [steps, setSteps] = useState([])
+  const [draft, setDraft] = useState(null)
   const [tab, setTab] = useState('leaderboard')
   const [confirmReset, setConfirmReset] = useState(false)
 
@@ -278,16 +375,21 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignment, participants, resultsSig])
 
-  const runDraw = async (names) => {
-    const { assignment: a } = drawPools(names)
+  // Run the animated draw: compute it, hold it as a draft, reveal it, then
+  // commit when the reveal finishes.
+  const runDraw = (names) => {
+    const { assignment: a, steps: s } = drawPools(names)
     setParticipants(names)
-    setAssignment(a)
+    setDraft(a)
+    setSteps(s)
+    setPhase('drawing')
+  }
+
+  const finishDraw = async () => {
+    setAssignment(draft)
     setPhase('done')
     setTab('squads')
-    try {
-      confetti({ particleCount: 130, spread: 75, origin: { y: 0.7 } })
-    } catch { /* ignore */ }
-    if (canManage) await pushPool({ participants: names, assignment: a }, adminKey)
+    if (canManage) await pushPool({ participants, assignment: draft }, adminKey)
   }
 
   const doReset = async () => {
@@ -301,6 +403,7 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
   const TABS = [
     ['leaderboard', 'Leaderboard'],
     ['squads', 'Squads'],
+    ['rules', 'How it works'],
     ['pools', 'Pools & Rankings'],
   ]
 
@@ -321,6 +424,9 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
     )
 
   if (phase === 'setup') return <PoolSetup onRun={runDraw} />
+
+  if (phase === 'drawing')
+    return <PoolDrawStage steps={steps} participants={participants} onComplete={finishDraw} />
 
   return (
     <>
@@ -346,6 +452,7 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
 
       {tab === 'leaderboard' && <PoolLeaderboard rows={rows} colorFor={colorFor} />}
       {tab === 'squads' && <PoolSquads rows={rows} colorFor={colorFor} />}
+      {tab === 'rules' && <PoolRules />}
       {tab === 'pools' && <PoolReference />}
 
       {confirmReset && (

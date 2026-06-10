@@ -470,6 +470,35 @@ h1, h2, h3 { font-family: 'Sora', sans-serif; font-weight: 700; letter-spacing: 
   font-family: 'Sora'; font-size: 11px; font-weight: 800;
 }
 
+/* ---------- Pool game: How it works ---------- */
+.rules { max-width: 760px; }
+.rule-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px 20px; margin-bottom: 14px; box-shadow: var(--shadow);
+}
+.rule-card h3 { margin: 0 0 8px; font-size: 18px; }
+.rule-card p { margin: 0 0 8px; color: var(--text); line-height: 1.6; font-size: 15px; }
+.rule-card p:last-child { margin-bottom: 0; }
+.rule-fine { color: var(--muted) !important; font-size: 13px !important; }
+.rule-list { list-style: none; margin: 6px 0 8px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rule-list li { display: flex; align-items: center; gap: 12px; font-size: 15px; }
+.rule-key {
+  font-family: 'Sora'; font-weight: 700; font-size: 12px; min-width: 56px; text-align: center;
+  padding: 4px 10px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.rule-key.win { background: rgba(39,174,96,0.18); color: #5fe39a; }
+.rule-key.draw { background: rgba(242,201,76,0.18); color: var(--gold); }
+.rule-key.loss { background: rgba(255,255,255,0.08); color: var(--muted); }
+.rule-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+.rule-table td { padding: 9px 4px; border-top: 1px solid var(--border); font-size: 15px; }
+.rule-table tr:first-child td { border-top: none; }
+.rule-mult { text-align: right; font-family: 'Sora'; font-weight: 800; color: var(--gold); }
+.rule-example { background: linear-gradient(160deg, rgba(242,201,76,0.08), var(--card)); border-color: rgba(242,201,76,0.3); }
+.rule-calc {
+  font-family: 'Sora'; font-size: 16px; background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin: 6px 0 10px !important;
+}
+
 /* ---------- Responsive / mobile ---------- */
 @media (max-width: 760px) {
   .main { padding: 18px 14px 36px; }
