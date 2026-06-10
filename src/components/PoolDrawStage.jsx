@@ -97,6 +97,12 @@ export default function PoolDrawStage({ steps, participants, onComplete }) {
   const progress = Math.min(index, steps.length)
   const team = display
 
+  // Float the pool currently being drawn to the top of the panel.
+  const activeLetter = done ? null : current?.letter
+  const orderedLetters = activeLetter
+    ? [activeLetter, ...POOL_LETTERS.filter((l) => l !== activeLetter)]
+    : POOL_LETTERS
+
   return (
     <div className="draw pool-draw">
       <div className="draw-head">
@@ -162,7 +168,7 @@ export default function PoolDrawStage({ steps, participants, onComplete }) {
 
       <div className="draw-mid">
         <aside className="draw-pools">
-          {POOL_LETTERS.map((letter) => {
+          {orderedLetters.map((letter) => {
             const active = !done && current?.letter === letter
             return (
               <div className={`draw-pool ${active ? 'active' : ''}`} key={letter}>
