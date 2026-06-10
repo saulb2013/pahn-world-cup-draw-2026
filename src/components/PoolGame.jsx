@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Flag from './Flag.jsx'
 import PoolDrawStage from './PoolDrawStage.jsx'
-import { drawPools, scorePlayers, teamByCode } from '../lib/poolgame.js'
+import { drawPools, scorePlayers, teamByCode, matchBreakdown } from '../lib/poolgame.js'
 import { POOL_LETTERS, POOL_NAMES, POOLS } from '../data/pools.js'
 import { fetchPool, pushPool } from '../lib/poolApi.js'
 
@@ -211,6 +211,75 @@ function PoolReference() {
   )
 }
 
+// ---- Points breakdown (per team, per game) ------------------------------
+function BreakdownTeamLine({ side, ownersOf, colorFor }) {
+  const team = teamByCode(side.code)
+  const owners = ownersOf(side.code)
+  return (
+    <div className="bd-team-line">
+      <span className={`bd-res bd-${side.result}`}>{side.result}</span>
+      <Flag code={side.code} name={team?.name} />
+      <span className="bd-name">{team?.name}</span>
+      {owners.map((o) => (
+        <span className="owner-chip sm" key={o} style={{ background: colorFor(o) }}>{o}</span>
+      ))}
+      <span className="bd-rank">×{side.rank}</span>
+      <span className={`bd-earned ${side.pts > 0 ? 'win' : 'zero'}`}>
+        {side.pts > 0 ? `+${fmt(side.pts)}` : '0'}
+      </span>
+    </div>
+  )
+}
+
+function PoolBreakdown({ rounds, ownersOf, colorFor }) {
+  const total = rounds.reduce((s, r) => s + r.matches.length, 0)
+  return (
+    <div className="breakdown">
+      <div className="section-head">
+        <h2>Points breakdown</h2>
+        <p>
+          Every played match and the points each team earned — ranking × result ×
+          the round's multiplier. This is exactly where each player's score comes from.
+        </p>
+      </div>
+
+      {total === 0 ? (
+        <div className="centered-msg" style={{ padding: '48px 20px' }}>
+          <h2>No results yet</h2>
+          <p>Points will appear here after the first matches are played.</p>
+        </div>
+      ) : (
+        rounds.map((round) => (
+          <div className="bd-round" key={round.name}>
+            <div className="bd-round-head">
+              <span className="bd-round-name">{round.name}</span>
+              <span className="bd-round-mult">multiplier ×{round.mult}</span>
+            </div>
+            {round.matches.map((m, i) => (
+              <div className="bd-card" key={i}>
+                <div className="bd-card-head">
+                  {m.label || round.name} · {m.scoreHome}–{m.scoreAway}
+                  {m.pens ? ` (pens: ${m.pens})` : ''}
+                </div>
+                <BreakdownTeamLine
+                  side={{ code: m.home.code, rank: m.rankHome, pts: m.ptsHome, result: m.resultHome }}
+                  ownersOf={ownersOf}
+                  colorFor={colorFor}
+                />
+                <BreakdownTeamLine
+                  side={{ code: m.away.code, rank: m.rankAway, pts: m.ptsAway, result: m.resultAway }}
+                  ownersOf={ownersOf}
+                  colorFor={colorFor}
+                />
+              </div>
+            ))}
+          </div>
+        ))
+      )}
+    </div>
+  )
+}
+
 // ---- How it works -------------------------------------------------------
 const ROUND_ROWS = [
   ['Group stage', '×1'],
@@ -375,6 +444,27 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignment, participants, resultsSig])
 
+  // code -> [players who drew it] (usually one; more only if >8 players)
+  const ownersByCode = useMemo(() => {
+    const m = {}
+    if (assignment) {
+      Object.entries(assignment).forEach(([player, picks]) => {
+        Object.values(picks).forEach((code) => {
+          ;(m[code] ||= []).push(player)
+        })
+      })
+    }
+    return m
+  }, [assignment])
+  const ownersOf = (code) => ownersByCode[code] || []
+
+  // Per-match points ledger — recomputed only when a result changes.
+  const breakdown = useMemo(
+    () => matchBreakdown(results || {}),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [resultsSig],
+  )
+
   // Run the animated draw: compute it, hold it as a draft, reveal it, then
   // commit when the reveal finishes.
   const runDraw = (names) => {
@@ -401,10 +491,11 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
   }
 
   const TABS = [
-    ['leaderboard', 'Leaderboard'],
-    ['squads', 'Squads'],
     ['rules', 'How it works'],
     ['pools', 'Pools & Rankings'],
+    ['squads', 'Squads'],
+    ['breakdown', 'Points breakdown'],
+    ['leaderboard', 'Leaderboard'],
   ]
 
   if (phase === 'loading')
@@ -450,10 +541,13 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
         ))}
       </nav>
 
-      {tab === 'leaderboard' && <PoolLeaderboard rows={rows} colorFor={colorFor} />}
-      {tab === 'squads' && <PoolSquads rows={rows} colorFor={colorFor} />}
       {tab === 'rules' && <PoolRules />}
       {tab === 'pools' && <PoolReference />}
+      {tab === 'squads' && <PoolSquads rows={rows} colorFor={colorFor} />}
+      {tab === 'breakdown' && (
+        <PoolBreakdown rounds={breakdown} ownersOf={ownersOf} colorFor={colorFor} />
+      )}
+      {tab === 'leaderboard' && <PoolLeaderboard rows={rows} colorFor={colorFor} />}
 
       {confirmReset && (
         <div className="modal-overlay" onClick={() => setConfirmReset(false)}>

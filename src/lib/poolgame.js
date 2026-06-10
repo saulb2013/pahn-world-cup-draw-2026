@@ -120,3 +120,94 @@ export function scorePlayers(players, assignment, results) {
 
   return rows.sort((a, b) => b.total - a.total || a.player.localeCompare(b.player))
 }
+
+const KO_ROUND_NAME = {
+  R32: 'Round of 32',
+  R16: 'Round of 16',
+  QF: 'Quarter-finals',
+  SF: 'Semi-finals',
+  F: 'Final',
+}
+
+// Per-match points ledger, grouped by round. Each match lists both teams and the
+// points each earned (so players can see exactly where every point came from):
+//   { name, mult, matches: [{ home, away, scoreHome, scoreAway, rankHome,
+//     rankAway, ptsHome, ptsAway, resultHome, resultAway }] }
+// resultHome/Away is 'W' | 'D' | 'L'.
+export function matchBreakdown(results) {
+  const { groups, fixtures, scores, knockout } = results
+  const rounds = []
+  const num = (v) => (v === '' || v == null ? null : Number(v))
+
+  // --- Group stage (×1) ---
+  const groupMatches = []
+  ;(fixtures || []).forEach((f) => {
+    const s = scores?.[f.id]
+    const hg = num(s?.home)
+    const ag = num(s?.away)
+    if (hg == null || ag == null || Number.isNaN(hg) || Number.isNaN(ag)) return
+    const rankHome = POOL_PTS[f.home.code]
+    const rankAway = POOL_PTS[f.away.code]
+    let ptsHome = 0
+    let ptsAway = 0
+    let resultHome = 'L'
+    let resultAway = 'L'
+    if (hg > ag) { ptsHome = rankHome * 3; resultHome = 'W'; resultAway = 'L' }
+    else if (ag > hg) { ptsAway = rankAway * 3; resultAway = 'W'; resultHome = 'L' }
+    else { ptsHome = rankHome; ptsAway = rankAway; resultHome = 'D'; resultAway = 'D' }
+    groupMatches.push({
+      home: f.home, away: f.away, scoreHome: hg, scoreAway: ag,
+      rankHome, rankAway, ptsHome, ptsAway, resultHome, resultAway,
+      label: `Group ${f.group}`,
+    })
+  })
+  if (groupMatches.length) rounds.push({ name: 'Group stage', mult: 1, matches: groupMatches })
+
+  // --- Knockouts ---
+  const koMatch = (a, b, sh, sa, winnerCode, mult, pens) => {
+    const rankHome = POOL_PTS[a.code]
+    const rankAway = POOL_PTS[b.code]
+    const homeWon = winnerCode === a.code
+    const awayWon = winnerCode === b.code
+    return {
+      home: a, away: b, scoreHome: sh, scoreAway: sa,
+      rankHome, rankAway,
+      ptsHome: homeWon ? rankHome * 3 * mult : 0,
+      ptsAway: awayWon ? rankAway * 3 * mult : 0,
+      resultHome: homeWon ? 'W' : 'L',
+      resultAway: awayWon ? 'W' : 'L',
+      pens,
+    }
+  }
+
+  if (Array.isArray(knockout) && knockout.length) {
+    const { rounds: koRounds } = feedBracket(knockout, BY_CODE)
+    koRounds.forEach((r) => {
+      const key = FEED_STAGE_TO_ROUND[r.stage]
+      const mult = KO_MULTIPLIER[key]
+      const matches = []
+      r.matches.forEach((m) => {
+        if (!m.a || !m.b || m.scoreA == null || m.scoreB == null) return
+        matches.push(koMatch(m.a, m.b, m.scoreA, m.scoreB, m.winner?.code, mult))
+      })
+      if (matches.length) rounds.push({ name: KO_ROUND_NAME[key], mult, matches })
+    })
+  } else if (groups && fixtures) {
+    const { teams } = liveBracketTeams(groups, fixtures, scores)
+    const { rounds: koRounds } = buildKnockout(teams, scores)
+    koRounds.forEach((r) => {
+      const mult = KO_MULTIPLIER[r.key]
+      const matches = []
+      r.matches.forEach((m) => {
+        const s = scores?.[m.id]
+        const sh = num(s?.home)
+        const sa = num(s?.away)
+        if (!m.a || !m.b || sh == null || sa == null) return
+        matches.push(koMatch(m.a, m.b, sh, sa, m.winner?.code, mult, s?.pens))
+      })
+      if (matches.length) rounds.push({ name: KO_ROUND_NAME[r.key], mult, matches })
+    })
+  }
+
+  return rounds
+}

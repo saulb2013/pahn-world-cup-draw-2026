@@ -3,7 +3,7 @@ import confetti from 'canvas-confetti'
 import { TEAMS } from '../data/teams.js'
 import { createMusic } from '../lib/music.js'
 import { teamByCode } from '../lib/poolgame.js'
-import { POOL_PTS } from '../data/pools.js'
+import { POOL_LETTERS, POOL_NAMES, POOLS, POOL_PTS } from '../data/pools.js'
 import Flag from './Flag.jsx'
 
 // Phase timings (ms) at 1x speed.
@@ -139,25 +139,62 @@ export default function PoolDrawStage({ steps, participants, onComplete }) {
         </div>
       </div>
 
-      <div className="reveal">
-        {done ? (
-          <div className="reveal-done">
-            <div className="big-check">✓</div>
-            <h2>That's the draw!</h2>
-            <p>Revealing the results…</p>
-          </div>
-        ) : (
-          <div className={`reveal-card ${locked ? 'locked' : 'spinning'}`}>
-            <Flag code={team?.code} name={team?.name} size="w320" className="reveal-flag" />
-            <div className="reveal-name">{team?.name}</div>
-            {locked && (
-              <div className="reveal-to">
-                <span className="arrow">→</span>
-                <span className="reveal-player">{current?.player}</span>
+      <div className="draw-mid">
+        <div className="reveal">
+          {done ? (
+            <div className="reveal-done">
+              <div className="big-check">✓</div>
+              <h2>That's the draw!</h2>
+              <p>Revealing the results…</p>
+            </div>
+          ) : (
+            <div className={`reveal-card ${locked ? 'locked' : 'spinning'}`}>
+              <Flag code={team?.code} name={team?.name} size="w320" className="reveal-flag" />
+              <div className="reveal-name">{team?.name}</div>
+              {locked && (
+                <div className="reveal-to">
+                  <span className="arrow">→</span>
+                  <span className="reveal-player">{current?.player}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <aside className="draw-pools">
+          {POOL_LETTERS.map((letter) => {
+            const active = !done && current?.letter === letter
+            return (
+              <div className={`draw-pool ${active ? 'active' : ''}`} key={letter}>
+                <div className="draw-pool-head">
+                  <span className="dp-letter">Pool {letter}</span>
+                  <span className="dp-name">{POOL_NAMES[letter]}</span>
+                </div>
+                {active ? (
+                  <ul className="draw-pool-list">
+                    {POOLS[letter].map(([code, pts]) => {
+                      const t = teamByCode(code)
+                      return (
+                        <li key={code}>
+                          <Flag code={code} name={t?.name} />
+                          <span className="dp-team">{t?.name}</span>
+                          <span className="dp-rank">{pts}</span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                ) : (
+                  <div className="draw-pool-flags">
+                    {POOLS[letter].map(([code]) => {
+                      const t = teamByCode(code)
+                      return <Flag key={code} code={code} name={t?.name} />
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
+            )
+          })}
+        </aside>
       </div>
 
       <div className="draw-board">

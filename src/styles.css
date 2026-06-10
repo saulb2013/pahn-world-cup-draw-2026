@@ -470,6 +470,55 @@ h1, h2, h3 { font-family: 'Sora', sans-serif; font-weight: 700; letter-spacing: 
   font-family: 'Sora'; font-size: 11px; font-weight: 800;
 }
 
+/* ---------- Pool game: draw pools side panel ---------- */
+.draw-mid { display: flex; gap: 18px; align-items: flex-start; }
+.draw-mid .reveal { flex: 1; min-width: 0; }
+.draw-pools { width: 280px; flex: none; display: flex; flex-direction: column; gap: 8px; }
+.draw-pool {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 9px 12px; transition: border 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.draw-pool.active {
+  border-color: var(--gold); box-shadow: 0 0 0 2px rgba(242,201,76,0.18);
+  background: linear-gradient(160deg, rgba(242,201,76,0.08), var(--card));
+}
+.draw-pool-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.dp-letter { font-family: 'Sora'; font-weight: 800; font-size: 14px; }
+.dp-name { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.draw-pool-flags { display: flex; flex-wrap: wrap; gap: 5px; }
+.draw-pool-flags .flag { width: 26px; height: 19px; }
+.draw-pool-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.draw-pool-list li { display: flex; align-items: center; gap: 8px; }
+.draw-pool-list .flag { width: 24px; height: 18px; }
+.dp-team { flex: 1; min-width: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dp-rank { font-size: 12px; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+
+/* ---------- Pool game: points breakdown ---------- */
+.breakdown { max-width: 760px; }
+.bd-round { margin-bottom: 22px; }
+.bd-round-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+.bd-round-name { font-family: 'Sora'; font-weight: 800; font-size: 16px; }
+.bd-round-mult { font-size: 12px; color: var(--gold); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.bd-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; }
+.bd-card-head { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+.bd-team-line { display: flex; align-items: center; gap: 9px; padding: 3px 0; }
+.bd-team-line .flag { width: 26px; height: 19px; }
+.bd-name { flex: 1; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd-rank { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bd-earned { font-family: 'Sora'; font-weight: 800; font-size: 14px; min-width: 52px; text-align: right; font-variant-numeric: tabular-nums; }
+.bd-earned.win { color: var(--gold); }
+.bd-earned.zero { color: var(--muted); }
+.bd-res {
+  font-family: 'Sora'; font-weight: 800; font-size: 11px; width: 20px; height: 20px; flex: none;
+  display: grid; place-items: center; border-radius: 6px;
+}
+.bd-res.bd-W { background: rgba(39,174,96,0.18); color: #5fe39a; }
+.bd-res.bd-D { background: rgba(242,201,76,0.18); color: var(--gold); }
+.bd-res.bd-L { background: rgba(255,255,255,0.06); color: var(--muted); }
+
 /* ---------- Pool game: How it works ---------- */
 .rules { max-width: 760px; }
 .rule-card {
@@ -531,6 +580,9 @@ h1, h2, h3 { font-family: 'Sora', sans-serif; font-weight: 700; letter-spacing: 
 
   .mode-switch { width: 100%; }
   .mode-switch button { flex: 1; padding: 11px 8px; font-size: 14px; }
+
+  .draw-mid { flex-direction: column; }
+  .draw-pools { width: 100%; }
 }
 
 @media (max-width: 480px) {
