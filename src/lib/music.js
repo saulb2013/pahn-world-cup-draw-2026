@@ -26,10 +26,13 @@ export function createMusic() {
   let step = 0
   let nextTime = 0
   let muted = false
+  let closed = false
 
   const ensure = () => {
     if (ctx) return
-    ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const AC = window.AudioContext || window.webkitAudioContext
+    if (!AC) return
+    ctx = new AC()
     master = ctx.createGain()
     master.gain.value = 0.0
     const comp = ctx.createDynamicsCompressor()
@@ -127,23 +130,46 @@ export function createMusic() {
 
   return {
     start() {
-      ensure()
-      if (ctx.state === 'suspended') ctx.resume()
-      step = 0
-      nextTime = ctx.currentTime + 0.08
-      master.gain.cancelScheduledValues(ctx.currentTime)
-      master.gain.setValueAtTime(0.0001, ctx.currentTime)
-      if (!muted)
-        master.gain.exponentialRampToValueAtTime(0.32, ctx.currentTime + 1.2)
-      if (timer) clearTimeout(timer)
-      loop()
+      try {
+        ensure()
+        if (!ctx) return
+        if (ctx.state === 'suspended') ctx.resume()
+        step = 0
+        nextTime = ctx.currentTime + 0.08
+        master.gain.cancelScheduledValues(ctx.currentTime)
+        master.gain.setValueAtTime(0.0001, ctx.currentTime)
+        if (!muted)
+          master.gain.exponentialRampToValueAtTime(0.32, ctx.currentTime + 1.2)
+        if (timer) clearTimeout(timer)
+        loop()
+      } catch {
+        /* audio unavailable (e.g. blocked / context limit) — draw still runs */
+      }
     },
+    // Fade out, stop scheduling, and CLOSE the AudioContext so it doesn't leak.
+    // Browsers cap the number of open contexts; without this, after a handful of
+    // draws new contexts fail to construct and all sound dies.
     stop() {
-      if (!ctx) return
-      master.gain.cancelScheduledValues(ctx.currentTime)
-      master.gain.setValueAtTime(master.gain.value, ctx.currentTime)
-      master.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.8)
+      if (!ctx || closed) return
+      closed = true
+      const dead = ctx
+      try {
+        master.gain.cancelScheduledValues(dead.currentTime)
+        master.gain.setValueAtTime(master.gain.value, dead.currentTime)
+        master.gain.exponentialRampToValueAtTime(0.0001, dead.currentTime + 0.6)
+      } catch {
+        /* ignore */
+      }
       if (timer) { clearTimeout(timer); timer = null }
+      ctx = null
+      master = null
+      setTimeout(() => {
+        try {
+          if (dead.state !== 'closed') dead.close()
+        } catch {
+          /* ignore */
+        }
+      }, 800)
     },
     setMuted(m) {
       muted = m
