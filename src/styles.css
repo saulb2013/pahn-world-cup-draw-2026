@@ -529,6 +529,16 @@ h1, h2, h3 { font-family: 'Sora', sans-serif; font-weight: 700; letter-spacing: 
 .bd-res.bd-D { background: rgba(242,201,76,0.18); color: var(--gold); }
 .bd-res.bd-L { background: rgba(255,255,255,0.06); color: var(--muted); }
 
+/* ---------- Pool game: persistent user bar ---------- */
+.pool-userbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 10px 14px; margin-bottom: 14px;
+}
+.pool-user { font-weight: 700; font-size: 14px; }
+.pool-user-state { font-weight: 500; color: var(--muted); font-size: 13px; }
+.pool-user-anon { color: var(--muted); font-weight: 600; }
+
 /* ---------- Pool game: login + team builder ---------- */
 .field-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 4px 0 6px; text-transform: uppercase; letter-spacing: 0.06em; }
 

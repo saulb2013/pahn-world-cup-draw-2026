@@ -430,7 +430,7 @@ function AdminPanel({ entries, onUnlock, onDelete, onReset, onRefresh }) {
             <div className="modal-actions">
               <button className="btn ghost" onClick={() => setConfirm(null)}>Cancel</button>
               <button className="btn danger" onClick={() => { const r = confirm.run; setConfirm(null); r() }}>
-                Yes, do it
+                Yes, I'm sure
               </button>
             </div>
           </div>
@@ -549,6 +549,23 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
 
   return (
     <>
+      <div className="pool-userbar">
+        {me ? (
+          <>
+            <span className="pool-user">
+              👤 {me.name}
+              <span className="pool-user-state">{me.submittedAt ? ' · team locked in' : ' · team not submitted yet'}</span>
+            </span>
+            <button className="btn ghost sm" onClick={logout}>Log out</button>
+          </>
+        ) : (
+          <>
+            <span className="pool-user pool-user-anon">Not logged in</span>
+            <button className="btn primary sm" onClick={() => setTab('team')}>Log in / Join</button>
+          </>
+        )}
+      </div>
+
       <nav className="tabs">
         {TABS.map(([key, label]) => (
           <button key={key} className={`tab ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>
