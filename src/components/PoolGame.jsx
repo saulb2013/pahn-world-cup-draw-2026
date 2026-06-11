@@ -348,20 +348,32 @@ function PoolRules() {
 
 // ---- Admin panel --------------------------------------------------------
 function AdminPanel({ entries, onUnlock, onDelete, onReset, onRefresh }) {
+  const [confirm, setConfirm] = useState(null) // { title, body, danger, run }
+
   return (
     <div className="admin-panel">
       <div className="section-head">
         <div className="my-team-head">
           <div>
             <h2>Admin · entries</h2>
-            <p>{entries.length} {entries.length === 1 ? 'entry' : 'entries'}. PINs shown so you can help anyone who forgets.</p>
+            <p>{entries.length} {entries.length === 1 ? 'entry' : 'entries'}.</p>
           </div>
           <div className="builder-actions">
             <button className="btn ghost sm" onClick={onRefresh}>Refresh</button>
-            <button className="btn danger sm" onClick={onReset}>Reset all</button>
           </div>
         </div>
       </div>
+
+      <div className="admin-note">
+        <p><b>Forgot a PIN?</b> You don't need to reset anything — each person's PIN is shown below, just read it back to them. Their team and points are untouched.</p>
+        <p><b>The buttons do NOT touch points by themselves.</b> Points are always recalculated live from match results — you can't "reset points" here.</p>
+        <ul>
+          <li><b>Reset team</b> — clears that person's picks so they can choose again. Use only if someone entered the wrong team. ⚠️ If matches have already been played, when they re-submit they'll <b>forfeit points for games before their new submission</b> (the late-entry rule). Confirmation required.</li>
+          <li><b>Delete (✕)</b> — removes that entry entirely (name, PIN, team). Confirmation required.</li>
+          <li><b>Reset all</b> — wipes every entry. Confirmation required.</li>
+        </ul>
+      </div>
+
       <div className="admin-list">
         {entries.length === 0 && <p className="rule-fine">No entries yet.</p>}
         {entries.map((e) => (
@@ -381,12 +393,49 @@ function AdminPanel({ entries, onUnlock, onDelete, onReset, onRefresh }) {
               </div>
             )}
             <div className="admin-row-actions">
-              {e.submittedAt && <button className="btn ghost sm" onClick={() => onUnlock(e.name)}>Unlock</button>}
-              <button className="icon-btn" title="Delete" onClick={() => onDelete(e.name)}>×</button>
+              {e.submittedAt && (
+                <button className="btn ghost sm" onClick={() => setConfirm({
+                  title: `Reset ${e.name}'s team?`,
+                  body: `${e.name} will have to pick their six teams again. If matches have already kicked off, they will not score points for those games once they re-submit. This can't be undone.`,
+                  danger: true,
+                  run: () => onUnlock(e.name),
+                })}>Reset team</button>
+              )}
+              <button className="icon-btn" title="Delete entry" onClick={() => setConfirm({
+                title: `Delete ${e.name}?`,
+                body: `This removes ${e.name}'s entry completely — name, PIN and team. This can't be undone.`,
+                danger: true,
+                run: () => onDelete(e.name),
+              })}>×</button>
             </div>
           </div>
         ))}
       </div>
+
+      {entries.length > 0 && (
+        <button className="btn danger sm admin-reset-all" onClick={() => setConfirm({
+          title: 'Reset ALL entries?',
+          body: 'Every player’s team and PIN will be wiped and everyone has to enter again. This can’t be undone.',
+          danger: true,
+          run: onReset,
+        })}>Reset all entries</button>
+      )}
+
+      {confirm && (
+        <div className="modal-overlay" onClick={() => setConfirm(null)}>
+          <div className="modal" onClick={(ev) => ev.stopPropagation()}>
+            <div className="modal-icon">⚠️</div>
+            <h3>{confirm.title}</h3>
+            <p>{confirm.body}</p>
+            <div className="modal-actions">
+              <button className="btn ghost" onClick={() => setConfirm(null)}>Cancel</button>
+              <button className="btn danger" onClick={() => { const r = confirm.run; setConfirm(null); r() }}>
+                Yes, do it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -396,7 +445,7 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
   const [players, setPlayers] = useState([])
   const [me, setMe] = useState(null)
   const [picks, setPicks] = useState({})
-  const [tab, setTab] = useState('team')
+  const [tab, setTab] = useState('rules')
   const [loginError, setLoginError] = useState(null)
   const [buildError, setBuildError] = useState(null)
   const [adminEntries, setAdminEntries] = useState([])
@@ -490,11 +539,11 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
   const adminAct = async (fn) => { const { entries } = await fn(); setAdminEntries(entries || []); refresh() }
 
   const TABS = [
-    ['team', 'My Team'],
-    ['leaderboard', 'Leaderboard'],
-    ['breakdown', 'Points breakdown'],
-    ['pools', 'Pools & Rankings'],
     ['rules', 'How it works'],
+    ['pools', 'Pools & Rankings'],
+    ['team', 'Build your team'],
+    ['breakdown', 'Points breakdown'],
+    ['leaderboard', 'Leaderboard'],
     ...(isAdmin ? [['admin', 'Admin']] : []),
   ]
 

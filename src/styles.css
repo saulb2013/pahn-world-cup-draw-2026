@@ -570,6 +570,12 @@ h1, h2, h3 { font-family: 'Sora', sans-serif; font-weight: 700; letter-spacing: 
 .admin-flags { display: flex; gap: 4px; }
 .admin-flags .flag { width: 22px; height: 16px; }
 .admin-row-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.admin-note { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+.admin-note p { margin: 0 0 8px; font-size: 13.5px; line-height: 1.55; color: var(--text); }
+.admin-note ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+.admin-note li { font-size: 13px; line-height: 1.5; color: var(--muted); }
+.admin-note b { color: var(--text); }
+.admin-reset-all { margin-top: 16px; }
 
 /* ---------- Pool game: How it works ---------- */
 .rules { max-width: 760px; }
