@@ -135,24 +135,27 @@ function TeamBuilder({ picks, setPicks, onSubmit, onLogout, error }) {
   )
 }
 
-// ---- Your locked team ---------------------------------------------------
-function MyTeam({ me, row, onLogout, lateNote }) {
-  const when = me.submittedAt
-    ? new Date(me.submittedAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
+// ---- One team card (used in the All teams grid) -------------------------
+function TeamCard({ row, isMe, submittedAt }) {
+  const when = submittedAt
+    ? new Date(submittedAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
     : ''
   return (
-    <div className="section-head">
-      <div className="my-team-head">
-        <div>
-          <h2>{me.name}'s team <span className="locked-tag">🔒 locked</span></h2>
-          <p>Submitted {when}. {fmt(row?.total)} points so far.</p>
+    <div className={`squad-card ${isMe ? 'leader' : ''}`}>
+      <div className="squad-head">
+        <div className="squad-title">
+          <span className="owner-chip" style={{ background: colorForName(row.player) }}>
+            {isMe ? 'My team' : row.player}
+          </span>
         </div>
-        <button className="btn ghost sm" onClick={onLogout}>Log out</button>
+        <div className="squad-meta">
+          <span className="lb-pts">{fmt(row.total)} pts</span>
+          {isMe && when && <span className="rule-fine" style={{ fontSize: 11 }}>🔒 {when}</span>}
+        </div>
       </div>
-      {lateNote && <p className="warn">{lateNote}</p>}
-      <ul className="squad-teams my-team-list">
+      <ul className="squad-teams">
         {POOL_LETTERS.map((L) => {
-          const t = row?.teams.find((x) => x.letter === L)
+          const t = row.teams.find((x) => x.letter === L)
           const team = teamByCode(t?.code)
           return (
             <li key={L}>
@@ -165,6 +168,28 @@ function MyTeam({ me, row, onLogout, lateNote }) {
           )
         })}
       </ul>
+    </div>
+  )
+}
+
+// ---- All teams (mine first, labelled "My team") -------------------------
+function AllTeams({ myRow, mySubmittedAt, lateNote, otherRows }) {
+  const anyTeams = myRow || otherRows.length
+  return (
+    <div className="section-head">
+      <h2>All teams</h2>
+      <p>Everyone's six picks and points so far{myRow ? ' — your team is first' : ''}.</p>
+      {lateNote && <p className="warn">{lateNote}</p>}
+      {anyTeams ? (
+        <div className="squad-grid" style={{ marginTop: 18 }}>
+          {myRow && <TeamCard row={myRow} isMe submittedAt={mySubmittedAt} />}
+          {otherRows.map((r) => <TeamCard key={r.player} row={r} />)}
+        </div>
+      ) : (
+        <div className="centered-msg" style={{ padding: '40px 20px' }}>
+          <p>No teams submitted yet.</p>
+        </div>
+      )}
     </div>
   )
 }
@@ -541,7 +566,7 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
   const TABS = [
     ['rules', 'How it works'],
     ['pools', 'Pools & Rankings'],
-    ['team', 'Build your team'],
+    ['team', 'All teams'],
     ['breakdown', 'Points breakdown'],
     ['leaderboard', 'Leaderboard'],
     ...(isAdmin ? [['admin', 'Admin']] : []),
@@ -575,13 +600,18 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
       </nav>
 
       {tab === 'team' && (
-        !me ? (
-          <PoolLogin onLogin={login} error={loginError} />
-        ) : !me.submittedAt ? (
-          <TeamBuilder picks={picks} setPicks={setPicks} onSubmit={submit} onLogout={logout} error={buildError} />
-        ) : (
-          <MyTeam me={me} row={myRow} onLogout={logout} lateNote={lateNote} />
-        )
+        <>
+          {!me && <PoolLogin onLogin={login} error={loginError} />}
+          {me && !me.submittedAt && (
+            <TeamBuilder picks={picks} setPicks={setPicks} onSubmit={submit} onLogout={logout} error={buildError} />
+          )}
+          <AllTeams
+            myRow={me?.submittedAt ? myRow : null}
+            mySubmittedAt={me?.submittedAt}
+            lateNote={me?.submittedAt ? lateNote : null}
+            otherRows={rows.filter((r) => r.player !== me?.name)}
+          />
+        </>
       )}
       {tab === 'leaderboard' && <PoolLeaderboard rows={rows} meName={me?.name} />}
       {tab === 'breakdown' && <PoolBreakdown rounds={breakdown} />}
