@@ -1,13 +1,21 @@
-// Serverless API for the POOL GAME's shared draw (separate from /api/state).
+// Serverless API for the POOL GAME — a multi-user team-builder (separate from
+// the sweepstake's /api/state).
 //
-//   GET  /api/pool  -> { configured, state }   (anyone — read only)
-//   POST /api/pool  -> { ok, state }            (admin only)
+//   GET  /api/pool                      -> { configured, players[] }   (public; PINs stripped)
+//   GET  /api/pool   x-admin-key        -> { ..., admin: entries[] }    (with PINs)
+//   POST /api/pool   { action, ... }    -> login | submit | admin ops
 //
-// State is a single JSON blob: { participants, assignment, updatedAt }. The pool
-// game reads live match results from the sweepstake's shared state; this
-// endpoint only stores its own player draw, so the two games stay independent.
-//
-// Storage reuses the same Upstash Redis (its own key) and the same ADMIN_KEY.
+// Players log in with name + PIN (claim on first use), pick one team per pool
+// A–F, and submit once (locked). State lives under Redis key wc2026:pool.
+
+import {
+  loginEntry,
+  submitEntry,
+  publicPlayers,
+  adminListEntries,
+  deleteEntry,
+  unlockEntry,
+} from '../src/lib/poolStore.js'
 
 const KEY = 'wc2026:pool'
 const ADMIN_KEY = process.env.ADMIN_KEY || 'pahn'
@@ -27,38 +35,63 @@ async function redis(command) {
 }
 const getState = async () => {
   const raw = await redis(['GET', KEY])
-  return raw ? JSON.parse(raw) : null
+  return raw ? JSON.parse(raw) : { players: {} }
 }
 const setState = (state) => redis(['SET', KEY, JSON.stringify(state)])
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
+  const isAdmin = (req.headers['x-admin-key'] || '') === ADMIN_KEY
 
-  if (req.method === 'GET') {
-    if (!configured) return res.status(200).json({ configured: false, state: null })
-    try {
-      return res.status(200).json({ configured: true, state: await getState() })
-    } catch (e) {
-      return res.status(500).json({ error: String(e) })
+  if (!configured) return res.status(200).json({ configured: false, players: [] })
+
+  try {
+    if (req.method === 'GET') {
+      const state = await getState()
+      const out = { configured: true, players: publicPlayers(state) }
+      if (isAdmin) out.admin = adminListEntries(state)
+      return res.status(200).json(out)
     }
-  }
 
-  if (req.method === 'POST') {
-    if (!configured) return res.status(503).json({ error: 'No backend configured' })
-    if ((req.headers['x-admin-key'] || '') !== ADMIN_KEY)
-      return res.status(401).json({ error: 'Not authorised' })
-    try {
+    if (req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {}
-      const state = {
-        participants: body.participants || [],
-        assignment: body.assignment || null,
-        updatedAt: Date.now(),
+      const { action } = body
+      const state = await getState()
+
+      if (action === 'login') {
+        const r = loginEntry(state, body.name, body.pin)
+        if (r.error) return res.status(400).json({ error: r.error })
+        if (r.state !== state) await setState(r.state)
+        return res.status(200).json({ ok: true, claimed: r.claimed, player: r.player })
       }
-      await setState(state)
-      return res.status(200).json({ ok: true, state })
-    } catch (e) {
-      return res.status(500).json({ error: String(e) })
+
+      if (action === 'submit') {
+        const r = submitEntry(state, body.name, body.pin, body.picks, Date.now())
+        if (r.error) return res.status(400).json({ error: r.error })
+        await setState(r.state)
+        return res.status(200).json({ ok: true, player: r.player })
+      }
+
+      // --- admin only ---
+      if (!isAdmin) return res.status(401).json({ error: 'Not authorised' })
+
+      if (action === 'delete') {
+        await setState(deleteEntry(state, body.name))
+        return res.status(200).json({ ok: true, admin: adminListEntries(await getState()) })
+      }
+      if (action === 'unlock') {
+        await setState(unlockEntry(state, body.name))
+        return res.status(200).json({ ok: true, admin: adminListEntries(await getState()) })
+      }
+      if (action === 'reset') {
+        await setState({ players: {} })
+        return res.status(200).json({ ok: true, admin: [] })
+      }
+
+      return res.status(400).json({ error: 'Unknown action' })
     }
+  } catch (e) {
+    return res.status(500).json({ error: String(e) })
   }
 
   res.setHeader('Allow', 'GET, POST')

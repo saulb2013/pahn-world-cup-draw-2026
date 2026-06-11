@@ -529,6 +529,48 @@ h1, h2, h3 { font-family: 'Sora', sans-serif; font-weight: 700; letter-spacing: 
 .bd-res.bd-D { background: rgba(242,201,76,0.18); color: var(--gold); }
 .bd-res.bd-L { background: rgba(255,255,255,0.06); color: var(--muted); }
 
+/* ---------- Pool game: login + team builder ---------- */
+.field-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 4px 0 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.builder { max-width: 860px; }
+.builder-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.builder-actions { display: flex; align-items: center; gap: 10px; }
+.builder-count { font-family: 'Sora'; font-weight: 700; font-size: 14px; color: var(--gold); white-space: nowrap; }
+.pick-pool { margin-bottom: 18px; }
+.pick-pool-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.pick-tile {
+  display: flex; align-items: center; gap: 9px; cursor: pointer; text-align: left;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 9px 11px;
+  color: var(--text); font: inherit; transition: border 0.15s, background 0.15s, transform 0.1s;
+}
+.pick-tile:hover { background: var(--card-strong); }
+.pick-tile:active { transform: translateY(1px); }
+.pick-tile .flag { width: 28px; height: 21px; }
+.pick-name { flex: 1; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pick-rank { font-size: 12px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pick-tile.on { border-color: var(--gold); background: linear-gradient(160deg, rgba(242,201,76,0.16), var(--card)); box-shadow: 0 0 0 2px rgba(242,201,76,0.25); }
+.pick-tile.on .pick-rank { color: var(--gold); }
+.builder-submit { margin-top: 18px; position: sticky; bottom: 14px; }
+.builder-submit .btn { width: 100%; }
+
+.my-team-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.locked-tag { font-size: 13px; font-weight: 600; color: var(--muted); margin-left: 8px; }
+.my-team-list { margin-top: 16px; max-width: 460px; }
+
+/* ---------- Pool game: admin panel ---------- */
+.admin-panel { max-width: 820px; }
+.admin-list { display: flex; flex-direction: column; gap: 8px; }
+.admin-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; }
+.admin-main { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 180px; }
+.admin-name { font-family: 'Sora'; font-weight: 700; font-size: 15px; }
+.admin-pin { font-size: 12px; font-weight: 700; color: var(--gold); background: rgba(242,201,76,0.12); padding: 2px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+.admin-status { font-size: 12px; color: var(--muted); }
+.admin-status.locked { color: #5fe39a; }
+.admin-flags { display: flex; gap: 4px; }
+.admin-flags .flag { width: 22px; height: 16px; }
+.admin-row-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
 /* ---------- Pool game: How it works ---------- */
 .rules { max-width: 760px; }
 .rule-card {

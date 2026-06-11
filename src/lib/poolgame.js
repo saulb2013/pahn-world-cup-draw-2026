@@ -1,17 +1,16 @@
-// Pool-game engine: a random per-pool draw + the PDF's scoring system.
+// Pool-game scoring (team-selection variant).
 //
-// DRAW: each player is dealt one random team from each of the six pools (A–F).
-// Within a pool, teams are dealt without replacement so no two players share a
-// team until the eight-team pool is exhausted (only repeats when >8 players).
-//
-// SCORING (per the rules):
 //   Points per result: Win = ranking × 3, Draw = ranking × 1, Loss = 0
 //   Round multipliers:  Group ×1, R32 ×2, R16 ×3, QF ×4, SF ×5, Final ×6
 //   (Final counts for the winner only. A win on penalties counts as a win.)
-// A player's total is the sum of their six teams' earned points.
+//
+// TIME-GATING: a player only scores a match that kicked off AT OR AFTER they
+// submitted their team. If you join late, you get nothing for matches already
+// played. Each player carries a `submittedAt` (epoch ms); each match a kickoff
+// epoch derived from the fixture (SAST = UTC+2) or the feed's UTC date.
 
 import { TEAMS } from '../data/teams.js'
-import { POOL_LETTERS, POOLS, POOL_PTS } from '../data/pools.js'
+import { POOL_LETTERS, POOL_PTS } from '../data/pools.js'
 import { pointsByTeam } from './groups.js'
 import { buildKnockout, feedBracket, liveBracketTeams } from './knockout.js'
 
@@ -26,101 +25,6 @@ const FEED_STAGE_TO_ROUND = {
   SEMI_FINALS: 'SF',
   FINAL: 'F',
 }
-
-export function shuffle(array) {
-  const a = [...array]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
-}
-
-// Deal one team per pool to each player. Returns { assignment, steps }:
-//   assignment[player] = { A: code, B: code, ... F: code }
-//   steps = ordered reveal list [{ player, letter, code }]
-export function drawPools(players) {
-  const assignment = {}
-  players.forEach((p) => (assignment[p] = {}))
-  const steps = []
-
-  POOL_LETTERS.forEach((letter) => {
-    const codes = POOLS[letter].map(([code]) => code)
-    let deck = shuffle(codes)
-    players.forEach((player) => {
-      if (deck.length === 0) deck = shuffle(codes)
-      const code = deck.shift()
-      assignment[player][letter] = code
-      steps.push({ player, letter, code })
-    })
-  })
-
-  return { assignment, steps }
-}
-
-// Per-team set of knockout round keys won, from whichever result source is live
-// (the football-data feed when present, otherwise the manually-seeded bracket).
-function knockoutWinsByTeam(results) {
-  const { groups, fixtures, scores, knockout } = results
-  const wins = {}
-  const add = (team, roundKey) => {
-    if (!team) return
-    ;(wins[team.code] ||= new Set()).add(roundKey)
-  }
-
-  if (Array.isArray(knockout) && knockout.length) {
-    const { rounds } = feedBracket(knockout, BY_CODE)
-    rounds.forEach((round) => {
-      const roundKey = FEED_STAGE_TO_ROUND[round.stage]
-      round.matches.forEach((m) => m.winner && add(m.winner, roundKey))
-    })
-  } else if (groups && fixtures) {
-    const { teams } = liveBracketTeams(groups, fixtures, scores)
-    const { rounds } = buildKnockout(teams, scores)
-    rounds.forEach((round) =>
-      round.matches.forEach((m) => m.winner && add(m.winner, round.key)),
-    )
-  }
-  return wins
-}
-
-// Earned points for a single team code given the current results.
-function teamPoints(code, standings, wins) {
-  const rank = POOL_PTS[code]
-  if (rank == null) return { group: 0, knockout: 0, total: 0 }
-  const row = standings[code]
-  const group = row ? rank * (3 * row.W + row.D) : 0 // group multiplier ×1
-  let ko = 0
-  if (wins[code]) {
-    wins[code].forEach((roundKey) => {
-      ko += rank * 3 * (KO_MULTIPLIER[roundKey] || 0)
-    })
-  }
-  return { group, knockout: ko, total: group + ko }
-}
-
-// Score every player. Returns rows sorted best-first:
-//   { player, total, teams: [{ letter, code, rank, group, knockout, total }] }
-export function scorePlayers(players, assignment, results) {
-  const standings = results.groups && results.fixtures
-    ? pointsByTeam(results.groups, results.fixtures, results.scores || {})
-    : {}
-  const wins = knockoutWinsByTeam(results)
-
-  const rows = players.map((player) => {
-    const picks = assignment?.[player] || {}
-    const teams = POOL_LETTERS.map((letter) => {
-      const code = picks[letter]
-      const pts = teamPoints(code, standings, wins)
-      return { letter, code, rank: POOL_PTS[code], ...pts }
-    })
-    const total = teams.reduce((s, t) => s + t.total, 0)
-    return { player, total, teams }
-  })
-
-  return rows.sort((a, b) => b.total - a.total || a.player.localeCompare(b.player))
-}
-
 const KO_ROUND_NAME = {
   R32: 'Round of 32',
   R16: 'Round of 16',
@@ -129,13 +33,31 @@ const KO_ROUND_NAME = {
   F: 'Final',
 }
 
-// Per-match points ledger, grouped by round. Each match lists both teams and the
-// points each earned (so players can see exactly where every point came from):
-//   { name, mult, matches: [{ home, away, scoreHome, scoreAway, rankHome,
-//     rankAway, ptsHome, ptsAway, resultHome, resultAway }] }
-// resultHome/Away is 'W' | 'D' | 'L'.
+const MONTHS = {
+  Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+  Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
+}
+const FAR_FUTURE = 8.64e15 // used when a kickoff time is unknown -> always counts
+
+// Kickoff epoch (ms) for a group fixture. Fixtures store e.g. "Thu 11 Jun" +
+// "21:00" in SAST (UTC+2); the tournament is entirely in 2026.
+function fixtureStart(f) {
+  try {
+    const tok = String(f.date).trim().split(/\s+/)
+    const day = parseInt(tok[tok.length - 2], 10)
+    const mon = MONTHS[tok[tok.length - 1]]
+    const [H, M] = String(f.time).split(':').map(Number)
+    if (mon == null || !Number.isFinite(day)) return 0
+    return Date.UTC(2026, mon, day, H - 2, M || 0)
+  } catch {
+    return 0
+  }
+}
+
+// Per-match points ledger, grouped by round. Each match carries both teams, the
+// points each earned, and its kickoff epoch (`start`).
 export function matchBreakdown(results) {
-  const { groups, fixtures, scores, knockout } = results
+  const { groups, fixtures, scores, knockout } = results || {}
   const rounds = []
   const num = (v) => (v === '' || v == null ? null : Number(v))
 
@@ -158,13 +80,13 @@ export function matchBreakdown(results) {
     groupMatches.push({
       home: f.home, away: f.away, scoreHome: hg, scoreAway: ag,
       rankHome, rankAway, ptsHome, ptsAway, resultHome, resultAway,
-      label: `Group ${f.group}`,
+      label: `Group ${f.group}`, start: fixtureStart(f),
     })
   })
   if (groupMatches.length) rounds.push({ name: 'Group stage', mult: 1, matches: groupMatches })
 
   // --- Knockouts ---
-  const koMatch = (a, b, sh, sa, winnerCode, mult, pens) => {
+  const koMatch = (a, b, sh, sa, winnerCode, mult, start, pens) => {
     const rankHome = POOL_PTS[a.code]
     const rankAway = POOL_PTS[b.code]
     const homeWon = winnerCode === a.code
@@ -176,7 +98,7 @@ export function matchBreakdown(results) {
       ptsAway: awayWon ? rankAway * 3 * mult : 0,
       resultHome: homeWon ? 'W' : 'L',
       resultAway: awayWon ? 'W' : 'L',
-      pens,
+      start, pens,
     }
   }
 
@@ -188,7 +110,8 @@ export function matchBreakdown(results) {
       const matches = []
       r.matches.forEach((m) => {
         if (!m.a || !m.b || m.scoreA == null || m.scoreB == null) return
-        matches.push(koMatch(m.a, m.b, m.scoreA, m.scoreB, m.winner?.code, mult))
+        const start = m.date ? Date.parse(m.date) || FAR_FUTURE : FAR_FUTURE
+        matches.push(koMatch(m.a, m.b, m.scoreA, m.scoreB, m.winner?.code, mult, start))
       })
       if (matches.length) rounds.push({ name: KO_ROUND_NAME[key], mult, matches })
     })
@@ -203,11 +126,56 @@ export function matchBreakdown(results) {
         const sh = num(s?.home)
         const sa = num(s?.away)
         if (!m.a || !m.b || sh == null || sa == null) return
-        matches.push(koMatch(m.a, m.b, sh, sa, m.winner?.code, mult, s?.pens))
+        matches.push(koMatch(m.a, m.b, sh, sa, m.winner?.code, mult, FAR_FUTURE, s?.pens))
       })
       if (matches.length) rounds.push({ name: KO_ROUND_NAME[r.key], mult, matches })
     })
   }
 
   return rounds
+}
+
+// Flatten the ledger into per-team scoring events: { code, pts, start }.
+export function pointEvents(results) {
+  const events = []
+  for (const r of matchBreakdown(results)) {
+    for (const m of r.matches) {
+      events.push({ code: m.home.code, pts: m.ptsHome, start: m.start })
+      events.push({ code: m.away.code, pts: m.ptsAway, start: m.start })
+    }
+  }
+  return events
+}
+
+// Score every player from their picks, honouring the time gate. `players` is
+// [{ name, picks: {A..F}, submittedAt }]. Returns rows sorted best-first.
+export function scorePlayers(players, results) {
+  const events = pointEvents(results || {})
+  const rows = (players || []).map((p) => {
+    const picks = p.picks || {}
+    const sub = p.submittedAt || 0
+    const owned = new Set(POOL_LETTERS.map((L) => picks[L]).filter(Boolean))
+    const perTeam = {}
+    let total = 0
+    for (const e of events) {
+      if (!owned.has(e.code)) continue
+      if (e.start < sub) continue // kicked off before they submitted -> missed
+      perTeam[e.code] = (perTeam[e.code] || 0) + e.pts
+      total += e.pts
+    }
+    const teams = POOL_LETTERS.map((L) => {
+      const code = picks[L]
+      return { letter: L, code, rank: POOL_PTS[code], total: perTeam[code] || 0 }
+    })
+    return { player: p.name, total, teams, submittedAt: sub }
+  })
+  return rows.sort(
+    (a, b) => b.total - a.total || String(a.player).localeCompare(String(b.player)),
+  )
+}
+
+// Standings helper retained for any callers (group W/D/L by team).
+export function teamStandings(results) {
+  const { groups, fixtures, scores } = results || {}
+  return groups && fixtures ? pointsByTeam(groups, fixtures, scores || {}) : {}
 }
