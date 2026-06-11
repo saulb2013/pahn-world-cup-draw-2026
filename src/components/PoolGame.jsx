@@ -195,7 +195,7 @@ function AllTeams({ myRow, mySubmittedAt, lateNote, otherRows }) {
 }
 
 // ---- Leaderboard --------------------------------------------------------
-function PoolLeaderboard({ rows, meName }) {
+function PoolLeaderboard({ rows, meName, reveal }) {
   const lead = rows[0]?.total || 1
   if (!rows.length)
     return (
@@ -209,6 +209,7 @@ function PoolLeaderboard({ rows, meName }) {
       <div className="section-head">
         <h2>Leaderboard</h2>
         <p>Live standings. Points = ranking × result (Win ×3, Draw ×1) × round multiplier (Group ×1 → Final ×6).</p>
+        {!reveal && <p className="warn">Lock in your own team to reveal everyone's picks.</p>}
       </div>
       <div className="lb-list">
         {rows.map((row, i) => (
@@ -222,17 +223,19 @@ function PoolLeaderboard({ rows, meName }) {
               <div className="lb-bar">
                 <div className="lb-bar-fill" style={{ width: `${Math.max(2, (row.total / lead) * 100)}%`, background: colorForName(row.player) }} />
               </div>
-              <div className="lb-teams">
-                {row.teams.map((t) => {
-                  const team = teamByCode(t.code)
-                  return (
-                    <span className="lb-chip" key={t.letter} title={`${team?.name} · ${fmt(t.total)} pts`}>
-                      <Flag code={t.code} name={team?.name} />
-                      <span className="lb-chip-pct">{fmt(t.total)}</span>
-                    </span>
-                  )
-                })}
-              </div>
+              {(reveal || row.player === meName) && (
+                <div className="lb-teams">
+                  {row.teams.map((t) => {
+                    const team = teamByCode(t.code)
+                    return (
+                      <span className="lb-chip" key={t.letter} title={`${team?.name} · ${fmt(t.total)} pts`}>
+                        <Flag code={t.code} name={team?.name} />
+                        <span className="lb-chip-pct">{fmt(t.total)}</span>
+                      </span>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -566,7 +569,7 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
   const TABS = [
     ['rules', 'How it works'],
     ['pools', 'Pools & Rankings'],
-    ['team', 'All teams'],
+    ['team', me?.submittedAt ? 'Teams' : 'Build your team'],
     ['breakdown', 'Points breakdown'],
     ['leaderboard', 'Leaderboard'],
     ...(isAdmin ? [['admin', 'Admin']] : []),
@@ -600,20 +603,22 @@ export default function PoolGame({ results, backend, isAdmin, adminKey }) {
       </nav>
 
       {tab === 'team' && (
-        <>
-          {!me && <PoolLogin onLogin={login} error={loginError} />}
-          {me && !me.submittedAt && (
-            <TeamBuilder picks={picks} setPicks={setPicks} onSubmit={submit} onLogout={logout} error={buildError} />
-          )}
+        !me ? (
+          <PoolLogin onLogin={login} error={loginError} />
+        ) : !me.submittedAt ? (
+          <TeamBuilder picks={picks} setPicks={setPicks} onSubmit={submit} onLogout={logout} error={buildError} />
+        ) : (
           <AllTeams
-            myRow={me?.submittedAt ? myRow : null}
-            mySubmittedAt={me?.submittedAt}
-            lateNote={me?.submittedAt ? lateNote : null}
-            otherRows={rows.filter((r) => r.player !== me?.name)}
+            myRow={myRow}
+            mySubmittedAt={me.submittedAt}
+            lateNote={lateNote}
+            otherRows={rows.filter((r) => r.player !== me.name)}
           />
-        </>
+        )
       )}
-      {tab === 'leaderboard' && <PoolLeaderboard rows={rows} meName={me?.name} />}
+      {tab === 'leaderboard' && (
+        <PoolLeaderboard rows={rows} meName={me?.name} reveal={!!me?.submittedAt} />
+      )}
       {tab === 'breakdown' && <PoolBreakdown rounds={breakdown} />}
       {tab === 'pools' && <PoolReference />}
       {tab === 'rules' && <PoolRules />}
